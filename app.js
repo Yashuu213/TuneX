@@ -62,10 +62,27 @@ function setMedianBackgroundAudio(active) {
 // --- 1. Initialization ---
 window.onload = () => {
     currentPlayer = document.getElementById('main-audio-engine');
+    
+    // Attach reliable events
+    if (currentPlayer) {
+        currentPlayer.addEventListener('play', () => updatePlayPauseIcons(true));
+        currentPlayer.addEventListener('pause', () => updatePlayPauseIcons(false));
+        currentPlayer.addEventListener('ended', () => player.next());
+        currentPlayer.addEventListener('waiting', () => setPlaybackStatus("Buffering..."));
+        currentPlayer.addEventListener('playing', () => setPlaybackStatus(""));
+    }
+
     loadDashboard();
     setupEventListeners();
     updateGreeting();
 };
+
+function setPlaybackStatus(status) {
+    const el = document.getElementById('full-artist'); // We can reuse artist field for status
+    if (el && currentTrack) {
+        el.textContent = status || currentTrack.uploader;
+    }
+}
 
 function switchPage(pageId) {
     document.querySelectorAll('.nav-item, .bn-item').forEach(item => {
@@ -394,60 +411,43 @@ function renderCards(results, containerId) {
 }
 
 // --- 3. Player Engine & Playback ---
-function initYouTubeAPI() {
-    const tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-}
-
-function onYouTubeIframeAPIReady() {
-    currentPlayer = new YT.Player('yt-player-hidden', {
-        height: '0',
-        width: '0',
-        videoId: '',
-        playerVars: { 'autoplay': 1, 'playsinline': 1 },
-        events: {
-            'onReady': onPlayerReady,
-            'onStateChange': onPlayerStateChange
-        }
-    });
-}
-
-function onPlayerReady(event) { console.log("TuneX Engine Ready 🚀"); }
-
-function onPlayerStateChange(event) {
-    if (event.data === YT.PlayerState.ENDED) player.next();
-    updatePlayPauseIcons(event.data === YT.PlayerState.PLAYING);
-}
+// Event listeners for the native audio engine (Initial setup moved to onload)
+function onPlayerReady() { console.log("TuneX Engine Ready 🚀"); }
 
 async function playTrack(track) {
     if (!track || !track.id) return;
     currentTrack = track;
 
-    // 1. Update Persistent History (Now LocalOnly for Vercel)
+    // 1. Update UI to "Loading"
+    updateUI(track);
+    setPlaybackStatus("Loading Stream...");
+    updateAmbientGlow(track.thumbnail);
+
+    // 2. Local History
     LocalDB.addToHistory(track);
 
-    // 2. Fetch Direct Audio Stream (Enables Background Play)
+    // 3. Fetch Stream
     try {
         const res = await fetch(`/api/stream?url=https://www.youtube.com/watch?v=${track.id}`);
         const data = await res.json();
         
         if (data.stream_url && currentPlayer) {
             currentPlayer.src = data.stream_url;
-            currentPlayer.play();
-            setMedianBackgroundAudio(true); // START BACKGROUND SERVICE
+            currentPlayer.load(); // Ensure new src is loaded
+            currentPlayer.play().catch(e => {
+                console.error("Autoplay Blocked:", e);
+                setPlaybackStatus("Tap to Play");
+            });
+            setMedianBackgroundAudio(true);
+        } else {
+            setPlaybackStatus("Stream Blocked/Error");
         }
     } catch (err) {
         console.error("Streaming Error:", err);
+        setPlaybackStatus("Connection Error");
     }
 
-    // 3. UI Updates
-    updateUI(track);
-    updateAmbientGlow(track.thumbnail);
     recentHistory.push(track);
-
-    // 4. PREDICTIVE QUEUE: Fetch next vibes
     fetchUpNext(track);
 }
 

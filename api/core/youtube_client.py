@@ -22,7 +22,7 @@ class YouTubeClient:
         }
         
         self.ydl_opts_stream = {
-            'format': 'bestaudio/best',
+            'format': 'bestaudio[ext=m4a]/bestaudio/best', # Force browser-compatible m4a/aac if possible
             'noplaylist': True,
             'quiet': True,
             'no_warnings': True,
