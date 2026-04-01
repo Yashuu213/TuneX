@@ -35,7 +35,11 @@ const LocalDB = {
 
 const player = {
     next: () => {
-        if (nextQueue.length > 0) playTrack(nextQueue.shift());
+        if (nextQueue.length > 0) {
+            playTrack(nextQueue.shift());
+        } else {
+            setMedianBackgroundAudio(false); // STOP SERVICE IF QUEUE ENDS
+        }
     },
     prev: () => {
         if (recentHistory.length > 1) {
@@ -45,6 +49,15 @@ const player = {
         }
     }
 };
+
+// Help Median.co (GoNative) handle background audio
+function setMedianBackgroundAudio(active) {
+    const bridge = window.median || window.gonative;
+    if (bridge && bridge.backgroundAudio) {
+        if (active) bridge.backgroundAudio.start();
+        else bridge.backgroundAudio.stop();
+    }
+}
 
 // --- 1. Initialization ---
 window.onload = () => {
@@ -423,6 +436,7 @@ async function playTrack(track) {
         if (data.stream_url && currentPlayer) {
             currentPlayer.src = data.stream_url;
             currentPlayer.play();
+            setMedianBackgroundAudio(true); // START BACKGROUND SERVICE
         }
     } catch (err) {
         console.error("Streaming Error:", err);
@@ -533,8 +547,13 @@ function updateMediaSession(track) {
 
 function togglePlay() {
     if (!currentPlayer) return;
-    if (currentPlayer.paused) currentPlayer.play();
-    else currentPlayer.pause();
+    if (currentPlayer.paused) {
+        currentPlayer.play();
+        setMedianBackgroundAudio(true);
+    } else {
+        currentPlayer.pause();
+        setMedianBackgroundAudio(false);
+    }
 }
 
 // Event listeners for the native audio engine
