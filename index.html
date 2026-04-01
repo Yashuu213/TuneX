@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TuneX - Premium Web Music Player</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts: Outfit for that Premium feel -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Lucide Icons via CDN for simplicity in this proof -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Sidebar Navigation (Desktop/Mini) -->
+        <nav id="sidebar">
+            <div class="branding" onclick="location.reload()" style="cursor: pointer;">
+                <img src="logo.png" alt="TuneX" id="brand-logo">
+                <span>TuneX</span>
+            </div>
+            
+            <div class="nav-group">
+                <div class="nav-item active" onclick="switchPage('home')">
+                    <i data-lucide="home"></i>
+                    <span>HOME</span>
+                </div>
+                <div class="nav-item" onclick="switchPage('search')">
+                    <i data-lucide="search"></i>
+                    <span>SEARCH</span>
+                </div>
+                <div class="nav-item" onclick="switchPage('trending')">
+                    <i data-lucide="trending-up"></i>
+                    <span>TRENDING</span>
+                </div>
+                <div class="nav-item" onclick="switchPage('library')">
+                    <i data-lucide="library"></i>
+                    <span>LIBRARY</span>
+                </div>
+            </div>
+
+            <!-- Premium Sidebar Profile -->
+            <div id="sidebar-profile">
+                <div class="profile-info">
+                    <img src="https://ui-avatars.com/api/?name=Premium+User&background=FFD700&color=000" id="user-avatar">
+                    <div class="profile-text">
+                        <div class="user-name">Premium User</div>
+                        <div class="user-tier">TUNEX GOLD</div>
+                    </div>
+                </div>
+                <button class="settings-btn"><i data-lucide="settings"></i></button>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main id="main-content">
+            <!-- Home Page -->
+            <section id="home-page" class="section active">
+                <h1 class="section-header" id="greeting">Good Morning ☀️</h1>
+                
+                <div class="filter-bar" id="home-filter-chips">
+                    <!-- Filters will be injected here via app.js (Hindi, Reels, Haryanvi, etc.) -->
+                </div>
+                <div id="home-rows">
+                    <!-- Dynamic Rows will be injected here -->
+                    <div class="row-loading">Fetching fresh songs from the deep...</div>
+                </div>
+            </section>
+
+            <!-- Search Page -->
+            <section id="search-page" class="section">
+                <div class="search-container">
+                    <input type="text" id="search-bar" placeholder="Search for songs, artists, or genres..." autocomplete="off">
+                </div>
+                <div id="search-results" class="card-grid">
+                    <!-- Results injected here -->
+                </div>
+                <div id="search-recommendations">
+                    <h2 class="section-header">Discover New Vibes</h2>
+                    <div id="search-rec-grid" class="card-grid"></div>
+                </div>
+            </section>
+
+            <!-- Trending Page -->
+            <section id="trending-page" class="section">
+                <h1 class="section-header">Trending Now India</h1>
+                <div id="trending-grid" class="card-grid">
+                    <!-- Trending items -->
+                </div>
+            </section>
+
+            <!-- Library Page -->
+            <section id="library-page" class="section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                    <h1 class="section-header" style="margin-bottom: 0;">My High-Class Collection 🏛️</h1>
+                    <button class="control-btn main" style="width: auto; height: auto; padding: 12px 25px; border-radius: 25px; font-weight: 800;">+ Create Playlist</button>
+                </div>
+                <div id="library-grid" class="card-grid">
+                    <!-- Playlists -->
+                </div>
+            </section>
+        </main>
+
+        <!-- Bottom Navigation (Mobile) -->
+        <nav id="bottom-nav">
+            <a href="#" class="bn-item active" onclick="switchPage('home')">
+                <i data-lucide="home"></i>
+                <span>HOME</span>
+            </a>
+            <a href="#" class="bn-item" onclick="switchPage('search')">
+                <i data-lucide="search"></i>
+                <span>SEARCH</span>
+            </a>
+            <a href="#" class="bn-item" onclick="switchPage('trending')">
+                <i data-lucide="trending-up"></i>
+                <span>TREND</span>
+            </a>
+            <a href="#" class="bn-item" onclick="switchPage('library')">
+                <i data-lucide="library"></i>
+                <span>LIBRARY</span>
+            </a>
+        </nav>
+
+        <!-- Mini Player (Global Footer) -->
+        <div id="mini-player">
+            <div class="mini-info" onclick="openFullPlayer()">
+                <img src="logo.png" alt="TuneX" id="mini-thumb">
+                <div class="mini-text">
+                    <span class="mini-title" id="mini-title">Discover Vibes</span>
+                    <span class="mini-artist" id="mini-artist">TuneX Premium</span>
+                </div>
+            </div>
+            
+            <div class="mini-controls">
+                <button class="control-btn" onclick="player.prev()" title="Previous"><i data-lucide="skip-back"></i></button>
+                <button class="control-btn" onclick="openPlaylistModal()" title="Add to Playlist">
+                    <i data-lucide="plus"></i>
+                </button>
+                <button class="control-btn main" id="play-pause-btn" onclick="togglePlay()" title="Play/Pause">
+                    <i data-lucide="play"></i>
+                </button>
+                <button class="control-btn" onclick="player.next()" title="Next"><i data-lucide="skip-forward"></i></button>
+            </div>
+            
+            <div id="mini-progress-container">
+                <div id="mini-progress-fill"></div>
+            </div>
+        </div>
+
+        <!-- Fullscreen Player Overlay (Modern Redesign) -->
+        <div id="full-player">
+            <div class="ambient-glow-layer"></div>
+            
+            <header class="full-header">
+                <button class="full-close-btn" onclick="closeFullPlayer()"><i data-lucide="chevron-down"></i></button>
+                <div class="full-header-text">Now Playing</div>
+                <div style="width: 50px;"></div> <!-- Spacer -->
+            </header>
+            
+            <div class="full-content">
+                <div class="full-art-container">
+                    <img src="logo.png" alt="Album Art" class="full-art" id="full-art">
+                </div>
+                
+                <div class="full-details">
+                    <div class="full-info">
+                        <h1 class="full-title" id="full-title">TuneX Discovery</h1>
+                        <p class="full-artist" id="full-artist">Experience Premium Sound</p>
+                    </div>
+
+                    <div class="full-player-controls">
+                        <div class="progress-area">
+                            <input type="range" id="full-progress" class="progress-slider" value="0" min="0" max="100" oninput="seekTrack(this.value)">
+                            <div class="time-container">
+                                <span id="current-time">0:00</span>
+                                <span id="total-time">0:00</span>
+                            </div>
+                        </div>
+
+                        <div class="playback-controls">
+                            <button class="ctrl-btn" onclick="player.prev()" title="Shuffle"><i data-lucide="shuffle"></i></button>
+                            <button class="ctrl-btn" onclick="player.prev()" title="Previous"><i data-lucide="skip-back"></i></button>
+                            <button class="ctrl-btn main-play" id="full-play-pause" onclick="togglePlay()" title="Play/Pause">
+                                <i data-lucide="play"></i>
+                            </button>
+                            <button class="ctrl-btn" onclick="player.next()" title="Next"><i data-lucide="skip-forward"></i></button>
+                            <button class="ctrl-btn" onclick="openPlaylistModal()" title="Add to Playlist"><i data-lucide="plus"></i></button>
+                            <button class="ctrl-btn" title="Repeat"><i data-lucide="repeat"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="full-up-next-section">
+                    <h3>Up Next 🎧</h3>
+                    <div id="full-up-next-grid" class="up-next-list">
+                        <!-- Up Next tracks will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- End App -->
+
+    <!-- Playlist Selector Modal -->
+    <div id="playlist-modal" class="modal-overlay" onclick="closePlaylistModal(event)">
+        <div class="modal-content glass-morphism" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>Add to Playlist</h3>
+                <button class="close-modal" onclick="closePlaylistModal()"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="create-playlist-box">
+                    <input type="text" id="new-playlist-name" placeholder="Nayi Playlist ka naam...">
+                    <button onclick="createNewPlaylist()" class="btn-create">Create</button>
+                </div>
+                <div class="playlist-list" id="modal-playlist-list">
+                    <!-- Existing playlists will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global YouTube Playback Engine -->
+    <div id="yt-player-hidden" style="display: none;"></div>
+
+    <script src="app.js"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>
