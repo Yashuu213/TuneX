@@ -78,15 +78,13 @@ def search():
     
     if not query and not is_trending: return jsonify([])
 
-    # Home caching logic (now transient on Vercel, but useful for sequential rapid calls)
-    if is_home:
-        cached = storage.get_home_cache(query or "trending_hits")
-        if cached: return jsonify(cached)
-
-    results = yt_client.search(query, limit=50, is_trending=is_trending)
+    # We fetch a larger pool (60) and sample from it 
+    # to ensure every refresh feels brand new.
+    results = yt_client.search(query, limit=60, is_trending=is_trending)
     
-    if is_home:
-        storage.save_home_cache(query or "trending_hits", results)
+    if is_home and results and len(results) > 15:
+        import random
+        results = random.sample(results, 15)
         
     return jsonify(results)
 

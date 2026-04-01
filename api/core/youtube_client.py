@@ -66,8 +66,8 @@ class YouTubeClient:
         try:
             print(f"DEBUG: Fetching SINGLE tracks for '{refined_query}'...")
             with yt_dlp.YoutubeDL(opts) as ydl:
-                # Higher multiplier to ensure we have enough results after filtering
-                search_n = limit + 40 if limit > 20 else limit + 20
+                # TURBO: Optimized pool size for speed-to-variety ratio
+                search_n = limit + 20 if limit > 20 else limit + 10
                 info = ydl.extract_info(f"ytsearch{search_n}:{refined_query}", download=False)
                 
                 if info and 'entries' in info:

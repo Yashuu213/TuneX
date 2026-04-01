@@ -115,24 +115,19 @@ def search():
     if not query and not is_trending:
         return jsonify([])
 
-    # 1. OPTIMIZATION: Persistent Caching for Home/Dashboard
-    if is_home:
-        cached_results = storage.get_home_cache(query or "trending_hits")
-        if cached_results:
-            print(f"⚡ Instant Turbo Cache HIT for '{query or 'trending_hits'}'")
-            return jsonify(cached_results)
-
+    # 1. OPTIMIZATION: We removed 'home_cache' to ensure freshness on every refresh.
     # 2. Track search terms for recommendations later
     if query:
         storage.add_search_term(query)
 
-    # 3. Perform the actual search if not cached (or for fresh results)
-    search_limit = 60 if query else 40
+    # 3. Perform the actual search with a LARGER pool (60)
+    search_limit = 60 if is_home else 30
     results = yt_client.search(query, limit=search_limit, is_trending=is_trending)
     
-    # 4. Save to Persistent Cache for next time
-    if is_home:
-        storage.save_home_cache(query or "trending_hits", results)
+    # 4. RANDOM SAMPLE: Pick 15 random items from the 60 found to ensure variety
+    if is_home and results and len(results) > 15:
+        import random
+        results = random.sample(results, 15)
         
     return jsonify(results)
 
@@ -140,13 +135,7 @@ def search():
 def recommendations():
     is_home = request.args.get('home', 'false').lower() == 'true'
     
-    # 1. OPTIMIZATION: Persistent Caching for Home/Dashboard
-    if is_home:
-        cached_results = storage.get_home_cache("recommendations_hits")
-        if cached_results and len(cached_results) > 0:
-            print(f"⚡ Instant Turbo Recommendations Cache HIT")
-            return jsonify(cached_results)
-
+    # Cache removed for freshness
     history = storage.get_history()
     prefs = storage.get_preferences()
     last_searches = prefs.get('last_searches', [])
@@ -163,13 +152,12 @@ def recommendations():
     
     seed_query = " ".join(seed_parts) if seed_parts else "latest bollywood hits 2026 trending"
     
-    # Fetch Recommendations
-    print(f"DEBUG: Recommendation Engine fetching for: {seed_query}")
-    results = yt_client.search(seed_query, limit=30)
+    # Fetch Recommendations with a wide pool (40) and sample 15
+    results = yt_client.search(seed_query, limit=40)
     
-    # 2. Save to Cache (ONLY if not empty)
-    if is_home and results:
-        storage.save_home_cache("recommendations_hits", results)
+    if is_home and results and len(results) > 15:
+        import random
+        results = random.sample(results, 15)
         
     return jsonify(results)
 

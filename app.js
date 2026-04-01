@@ -195,26 +195,15 @@ async function loadDashboard() {
 
     const categories = [
         { title: "For You ✨", isRecommendation: true },
-        { title: "Love Songs 💖", query: "bollywood love songs" },
-        { title: "Party Mix 🕺", query: "bollywood dance hits" },
-        { title: "Lofi Chill ☁️", query: "lofi hip hop hindi" },
-        { title: "Trending 🔥", query: "", isTrending: true },
-        { title: "Wedding Hits 💍", query: "bollywood wedding songs 2026" },
-        { title: "Gym Workout ⚡", query: "gym workout songs hindi 2026" },
-        { title: "Powerful Beats 🥁", query: "powerful hindi motivational songs 2026" },
-        { title: "Retro Classics 📻", query: "90s bollywood hits" },
-        { title: "Sad Melodies 🌧️", query: "bollywood sad songs 2026" },
-        { title: "Punjabi Power 🚩", query: "punjabi hits 2026" },
-        { title: "Bollywood Hip Hop 🎤", query: "hindi rap hip hop 2026" },
-        { title: "Instrumental Soul 🎻", query: "instrumental hindi covers 2026" },
-        { title: "Kids Special 🧸", query: "hindi rhymes and songs" },
-        { title: "Soulful Sufi ✨", query: "sufi songs bollywood 2026" },
-        { title: "Unplugged Versions 🎸", query: "bollywood unplugged acoustic 2026" },
-        { title: "Rock Anthems 🤘", query: "indian rock songs 2026" },
-        { title: "Monsoon Vibes ☔", query: "hindi rain songs 2026" },
-        { title: "Travel Diary 🚗", query: "road trip songs hindi" },
-        { title: "Morning Motivation 🌅", query: "morning prayers and songs" },
-        { title: "Late Night Jazz 🎷", query: "hindi soft night music 2026" }
+        { title: "Trending Now 🔥", query: "trending hindi viral songs 2026", isTrending: true },
+        { title: "Romantic Hits 💖", query: "latest bollywood love songs 2026" },
+        { title: "Party Anthems 🕺", query: "bollywood dance party hits 2026" },
+        { title: "Lofi Vibes ☁️", query: "hindi lofi chill mix 2026" },
+        { title: "Viral Reels 🤳", query: "trending instagram reels songs hindi" },
+        { title: "90s Golden Era 📻", query: "best 90s bollywood songs" },
+        { title: "Punjabi Fresh 🚩", query: "new punjabi songs 2026 latest" },
+        { title: "Workout Energy ⚡", query: "gym workout motivation songs hindi" },
+        { title: "Sad Melodies 🌧️", query: "bollywood heart touching sad songs 2026" }
     ];
 
     const rowsContainer = document.getElementById('home-rows');
@@ -235,25 +224,31 @@ async function loadDashboard() {
         return { ...cat, rowId };
     });
 
-    // 2. PRIORITIZED PARALLEL FETCHING
-    const priorities = rowMappings.slice(0, 3);
-    const defaults = rowMappings.slice(3);
+    // 2. TURBO PARALLEL FETCHING (Increasing from 3 to 6 at once)
+    const seed = Math.floor(Math.random() * 999999);
+    const priorities = rowMappings.slice(0, 6);
+    const defaults = rowMappings.slice(6);
 
     // Speed up top rows first
     await Promise.all(priorities.map(async (cat) => {
         let r;
         if (cat.isRecommendation) {
-            const res = await fetch('/api/recommendations?home=true');
+            const res = await fetch(`/api/recommendations?home=true&v=${seed}`);
             r = await res.json();
         } else {
-            r = await youtubeSearch(cat.query, cat.isTrending, true);
+            // Passing seed to ensure un-cached backend sampling
+            const url = cat.isTrending ? 
+                `/api/search?trending=true&home=true&seed=${seed}` : 
+                `/api/search?q=${encodeURIComponent(cat.query)}&home=true&seed=${seed}`;
+            const res = await fetch(url);
+            r = await res.json();
         }
 
         const grid = document.getElementById(cat.rowId);
         if (grid) {
             grid.innerHTML = '';
             if (r && r.length > 0) renderCards(r, cat.rowId);
-            else grid.innerHTML = '<div class="empty-state">No hits found. Try searching!</div>';
+            else grid.innerHTML = '<div class="empty-state">No hits found. Try refreshing!</div>';
         }
     }));
 
@@ -261,10 +256,18 @@ async function loadDashboard() {
     setTimeout(() => {
         defaults.forEach(async (cat) => {
             let r;
-            if (cat.isRecommendation) r = await (await fetch('/api/recommendations')).json();
-            else r = await youtubeSearch(cat.query, cat.isTrending, true); // home=true
+            if (cat.isRecommendation) {
+                const res = await fetch(`/api/recommendations?home=true&v=${seed}`);
+                r = await res.json();
+            } else {
+                const url = cat.isTrending ? 
+                    `/api/search?trending=true&home=true&seed=${seed}` : 
+                    `/api/search?q=${encodeURIComponent(cat.query)}&home=true&seed=${seed}`;
+                const res = await fetch(url);
+                r = await res.json();
+            }
             const grid = document.getElementById(cat.rowId);
-            if (grid) grid.innerHTML = ''; // Clear "Connecting..."
+            if (grid) grid.innerHTML = '';
             renderCards(r, cat.rowId);
         });
     }, 1500);
@@ -297,7 +300,10 @@ async function renderGenreDiscovery(genre) {
     const query = genre === "Trending" ? "" : `${genre} viral songs latest 2026`;
     const isTrending = genre === "Trending";
 
-    const results = await youtubeSearch(query, isTrending);
+    const url = isTrending ? `/api/search?trending=true&v=${Date.now()}` : `/api/search?q=${encodeURIComponent(query)}&v=${Date.now()}`;
+    const res = await fetch(url);
+    const results = await res.json();
+    
     const grid = document.getElementById('genre-grid');
     if (grid) {
         grid.innerHTML = '';
@@ -314,7 +320,8 @@ async function loadTrending() {
 
     // Fetch a mix of India's most viral, most viewed and most trending (Strictly Latest)
     try {
-        const results = await youtubeSearch("top bollywood viral hits 2026 fresh new songs", true);
+        const res = await fetch(`/api/search?trending=true&home=true&v=${Date.now()}`);
+        const results = await res.json();
         grid.innerHTML = '';
         renderCards(results, 'trending-grid');
     } catch (e) {
@@ -374,7 +381,8 @@ async function loadSearch() {
         const recGrid = document.getElementById('search-rec-grid');
         if (recGrid && recGrid.innerHTML === '') {
             recGrid.innerHTML = '<div class="loading">Finding vibes...</div>';
-            const suggestions = await youtubeSearch("latest bollywood songs 2024", true);
+            const res = await fetch(`/api/search?q=latest%20bollywood%20songs%202026&v=${Date.now()}`);
+            const suggestions = await res.json();
             recGrid.innerHTML = '';
             renderCards(suggestions, 'search-rec-grid');
         }
@@ -391,7 +399,7 @@ function renderCards(results, containerId) {
         card.className = 'card track-card';
         card.innerHTML = `
             <div class="card-img-container">
-                <img src="${track.thumbnail}" loading="lazy">
+                <img src="${track.thumbnail}" loading="lazy" onerror="this.src='/logo.png'">
                 <div class="card-play-overlay">
                     <i data-lucide="play"></i>
                 </div>
