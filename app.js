@@ -539,6 +539,12 @@ function updatePlayPauseIcons(isPlaying) {
             btn.innerHTML = `<i data-lucide="${iconName}"></i>`;
         }
     });
+
+    // Synchronize System Notification State (PRO feature for Mobile Apps)
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+    }
+
     lucide.createIcons();
 }
 
