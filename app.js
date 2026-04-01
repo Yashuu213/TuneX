@@ -523,12 +523,12 @@ function updateMediaSession(track) {
             artist: track.uploader,
             album: 'TuneX Premium',
             artwork: [
-                { src: track.thumbnail, sizes: '96x96',   type: 'image/png' },
-                { src: track.thumbnail, sizes: '128x128', type: 'image/png' },
-                { src: track.thumbnail, sizes: '192x192', type: 'image/png' },
-                { src: track.thumbnail, sizes: '256x256', type: 'image/png' },
-                { src: track.thumbnail, sizes: '384x384', type: 'image/png' },
-                { src: track.thumbnail, sizes: '512x512', type: 'image/png' },
+                { src: `/api/proxy_image?url=${encodeURIComponent(track.thumbnail)}`, sizes: '96x96',   type: 'image/jpeg' },
+                { src: `/api/proxy_image?url=${encodeURIComponent(track.thumbnail)}`, sizes: '128x128', type: 'image/jpeg' },
+                { src: `/api/proxy_image?url=${encodeURIComponent(track.thumbnail)}`, sizes: '192x192', type: 'image/jpeg' },
+                { src: `/api/proxy_image?url=${encodeURIComponent(track.thumbnail)}`, sizes: '256x256', type: 'image/jpeg' },
+                { src: `/api/proxy_image?url=${encodeURIComponent(track.thumbnail)}`, sizes: '384x384', type: 'image/jpeg' },
+                { src: `/api/proxy_image?url=${encodeURIComponent(track.thumbnail)}`, sizes: '512x512', type: 'image/jpeg' },
             ]
         });
 
@@ -538,8 +538,8 @@ function updateMediaSession(track) {
         navigator.mediaSession.setActionHandler('previoustrack', () => player.prev());
         navigator.mediaSession.setActionHandler('nexttrack', () => player.next());
         navigator.mediaSession.setActionHandler('seekto', (details) => {
-            if (currentPlayer && currentPlayer.seekTo) {
-                currentPlayer.seekTo(details.seekTime);
+            if (currentPlayer) {
+                currentPlayer.currentTime = details.seekTime;
             }
         });
     }
