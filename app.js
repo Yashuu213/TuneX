@@ -368,6 +368,22 @@ async function renderArtists() {
     });
 }
 
+// --- 6. UTILITY: Median.co Background Bridge ---
+function setMedianBackgroundAudio(isPlaying) {
+    if (typeof median !== 'undefined' && median.backgroundAudio) {
+        if (isPlaying) {
+            median.backgroundAudio.start();
+            console.log("Median Bridge: Background Audio ON");
+        } else {
+            median.backgroundAudio.stop();
+            console.log("Median Bridge: Background Audio OFF");
+        }
+    } else {
+        // Fallback for browser (No median object)
+        console.log("Median Bridge: Not detected (Running in browser)");
+    }
+}
+
 async function loadSearch() {
     const sb = document.getElementById('search-bar');
     const recSection = document.getElementById('search-recommendations');
@@ -465,10 +481,9 @@ async function playTrack(track) {
 
     // 2. Claim Background Audio slot (OS TRICK)
     if (nativeAudioEngine) {
-        // A very tiny silent audio snippet URL or a placeholder
-        // We use a high-stability CDN silent audio file
-        nativeAudioEngine.src = "https://www.soundjay.com/buttons/beep-01a.mp3"; 
-        nativeAudioEngine.volume = 0.01;
+        // Use Digital Silence (Base64) for ultra-stability (No dependence on URL fetch)
+        // This is a 1-second silent MP3 loop
+        nativeAudioEngine.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
         nativeAudioEngine.play().catch(e => console.log("Background claimed"));
     }
 
