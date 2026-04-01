@@ -48,7 +48,7 @@ const player = {
 
 // --- 1. Initialization ---
 window.onload = () => {
-    initYouTubeAPI();
+    currentPlayer = document.getElementById('main-audio-engine');
     loadDashboard();
     setupEventListeners();
     updateGreeting();
@@ -415,9 +415,17 @@ async function playTrack(track) {
     // 1. Update Persistent History (Now LocalOnly for Vercel)
     LocalDB.addToHistory(track);
 
-    // 2. Fetch Stream and Play
-    if (currentPlayer && currentPlayer.loadVideoById) {
-        currentPlayer.loadVideoById(track.id);
+    // 2. Fetch Direct Audio Stream (Enables Background Play)
+    try {
+        const res = await fetch(`/api/stream?url=https://www.youtube.com/watch?v=${track.id}`);
+        const data = await res.json();
+        
+        if (data.stream_url && currentPlayer) {
+            currentPlayer.src = data.stream_url;
+            currentPlayer.play();
+        }
+    } catch (err) {
+        console.error("Streaming Error:", err);
     }
 
     // 3. UI Updates
@@ -525,9 +533,15 @@ function updateMediaSession(track) {
 
 function togglePlay() {
     if (!currentPlayer) return;
-    const state = currentPlayer.getPlayerState();
-    if (state === YT.PlayerState.PLAYING) currentPlayer.pauseVideo();
-    else currentPlayer.playVideo();
+    if (currentPlayer.paused) currentPlayer.play();
+    else currentPlayer.pause();
+}
+
+// Event listeners for the native audio engine
+if (currentPlayer) {
+    currentPlayer.onplay = () => updatePlayPauseIcons(true);
+    currentPlayer.onpause = () => updatePlayPauseIcons(false);
+    currentPlayer.onended = () => player.next();
 }
 
 function updatePlayPauseIcons(isPlaying) {
@@ -550,20 +564,21 @@ function updatePlayPauseIcons(isPlaying) {
 
 function seekTrack(value) {
     if (!currentPlayer) return;
-    const duration = currentPlayer.getDuration();
+    const duration = currentPlayer.duration;
     const seekTo = (value / 100) * duration;
-    currentPlayer.seekTo(seekTo, true);
+    currentPlayer.currentTime = seekTo;
 }
 
 // Progress Tracker
 setInterval(() => {
-    if (currentPlayer && currentPlayer.getCurrentTime) {
-        const current = currentPlayer.getCurrentTime();
-        const duration = currentPlayer.getDuration();
+    if (currentPlayer && !currentPlayer.paused) {
+        const current = currentPlayer.currentTime;
+        const duration = currentPlayer.duration;
         const pct = (current / duration) * 100;
 
         const sliders = ['mini-progress', 'full-progress'];
         sliders.forEach(id => {
+            const s = document.getElementById(id);
             if (s) s.value = pct || 0;
         });
 
@@ -768,49 +783,4 @@ function setupEventListeners() {
     });
 }
 // --- 6. PLAYER ENGINE (CORE) ---
-function initYouTubeAPI() {
-    if (window.YT) return; // Already loaded
-    const tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-}
-
-// YT API global callback
-window.onYouTubeIframeAPIReady = function () {
-    currentPlayer = new YT.Player('yt-player-hidden', {
-        height: '0',
-        width: '0',
-        videoId: '',
-        playerVars: {
-            'autoplay': 0,
-            'controls': 0,
-            'rel': 0,
-            'showinfo': 0,
-            'iv_load_policy': 3,
-            'modestbranding': 1
-        },
-        events: {
-            'onReady': onPlayerReady,
-            'onStateChange': onPlayerStateChange
-        }
-    });
-};
-
-function onPlayerReady(event) {
-    console.log("TuneX Player Ready ⚡");
-}
-
-function onPlayerStateChange(event) {
-    if (event.data === YT.PlayerState.PLAYING) {
-        updatePlayPauseIcons(true);
-        document.querySelector('.full-art').classList.add('playing');
-    } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
-        updatePlayPauseIcons(false);
-        document.querySelector('.full-art').classList.remove('playing');
-
-        if (event.data === YT.PlayerState.ENDED) {
-            player.next(); // Autoplay next in queue
-        }
-    }
-}
+// YouTube API and initialization removed - using native audio engine for background play.
