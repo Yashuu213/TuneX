@@ -121,16 +121,30 @@ def proxy_stream():
     import requests
     from flask import Response, stream_with_context
 
-    def generate():
-        # User-Agent is often required by YouTube to avoid 403 Forbidden
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
+    # Forward the client's Range header to support seeking and buffering
+    headers = {key: value for (key, value) in request.headers if key.lower() == 'range'}
+    headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    
+    try:
         r = requests.get(url, headers=headers, stream=True, timeout=15)
-        for chunk in r.iter_content(chunk_size=1024*128): # 128kb chunks
-            yield chunk
+        
+        # Prepare response headers for partial content (206)
+        res_headers = {
+            'Content-Type': r.headers.get('Content-Type', 'audio/mpeg'),
+            'Accept-Ranges': 'bytes',
+            'Cache-Control': 'no-cache'
+        }
+        if 'Content-Range' in r.headers: res_headers['Content-Range'] = r.headers['Content-Range']
+        if 'Content-Length' in r.headers: res_headers['Content-Length'] = r.headers['Content-Length']
 
-    return Response(stream_with_context(generate()), content_type="audio/mpeg")
+        def generate():
+            for chunk in r.iter_content(chunk_size=1024*256): # 256kb chunks for speed
+                yield chunk
+
+        return Response(stream_with_context(generate()), status=r.status_code, headers=res_headers)
+    except Exception as e:
+        print(f"Proxy Streaming Error: {e}")
+        return "Streaming Error", 500
 
 # Note: /api/history and /api/playlists are handled client-side now for Vercel compatibility.
 
