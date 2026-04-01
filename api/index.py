@@ -108,7 +108,29 @@ def get_lyrics():
 def get_stream():
     video_url = request.args.get('url', '')
     stream_url, title = yt_client.get_stream_url(video_url)
-    return jsonify({"stream_url": stream_url, "title": title})
+    # Return the proxied URL instead of the direct YouTube URL
+    # This is crucial for bypassing IP-based blocking
+    proxied_url = f"/api/proxy_stream?url={stream_url}"
+    return jsonify({"stream_url": proxied_url, "title": title})
+
+@app.route('/api/proxy_stream')
+def proxy_stream():
+    url = request.args.get('url', '')
+    if not url: return "No URL", 400
+    
+    import requests
+    from flask import Response, stream_with_context
+
+    def generate():
+        # User-Agent is often required by YouTube to avoid 403 Forbidden
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        r = requests.get(url, headers=headers, stream=True, timeout=15)
+        for chunk in r.iter_content(chunk_size=1024*128): # 128kb chunks
+            yield chunk
+
+    return Response(stream_with_context(generate()), content_type="audio/mpeg")
 
 # Note: /api/history and /api/playlists are handled client-side now for Vercel compatibility.
 
