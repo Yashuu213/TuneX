@@ -59,19 +59,19 @@ function setMedianBackgroundAudio(active) {
     }
 }
 
+let ytPlayer = null;
+let nativeAudioEngine = null;
+
 // --- 1. Initialization ---
 window.onload = () => {
-    currentPlayer = document.getElementById('main-audio-engine');
+    nativeAudioEngine = document.getElementById('main-audio-engine');
     
-    // Attach reliable events
-    if (currentPlayer) {
-        currentPlayer.addEventListener('play', () => updatePlayPauseIcons(true));
-        currentPlayer.addEventListener('pause', () => updatePlayPauseIcons(false));
-        currentPlayer.addEventListener('ended', () => player.next());
-        currentPlayer.addEventListener('waiting', () => setPlaybackStatus("Buffering..."));
-        currentPlayer.addEventListener('playing', () => setPlaybackStatus(""));
+    // Support Background Modes
+    if (nativeAudioEngine) {
+        nativeAudioEngine.onended = () => nativeAudioEngine.play(); // Infinite silent loop
     }
 
+    initYouTubeAPI();
     loadDashboard();
     setupEventListeners();
     updateGreeting();
@@ -411,42 +411,70 @@ function renderCards(results, containerId) {
 }
 
 // --- 3. Player Engine & Playback ---
-// Event listeners for the native audio engine (Initial setup moved to onload)
-function onPlayerReady() { console.log("TuneX Engine Ready 🚀"); }
+function initYouTubeAPI() {
+    const tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+}
+
+function onYouTubeIframeAPIReady() {
+    ytPlayer = new YT.Player('yt-player-hidden', {
+        height: '0',
+        width: '0',
+        videoId: '',
+        playerVars: { 
+            'autoplay': 1, 
+            'playsinline': 1,
+            'controls': 0,
+            'disablekb': 1,
+            'fs': 0
+        },
+        events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange
+        }
+    });
+}
+
+function onPlayerReady(event) { console.log("TuneX Engine Ready 🚀"); }
+
+function onPlayerStateChange(event) {
+    if (event.data === YT.PlayerState.ENDED) player.next();
+    updatePlayPauseIcons(event.data === YT.PlayerState.PLAYING);
+    if (event.data === YT.PlayerState.PLAYING) setPlaybackStatus("");
+    if (event.data === YT.PlayerState.BUFFERING) setPlaybackStatus("Buffering...");
+}
 
 async function playTrack(track) {
     if (!track || !track.id) return;
     currentTrack = track;
 
-    // 1. Update UI to "Loading"
+    // 1. UI Status
     updateUI(track);
-    setPlaybackStatus("Loading Stream...");
+    setPlaybackStatus("Loading Fast CDN...");
     updateAmbientGlow(track.thumbnail);
 
-    // 2. Local History
-    LocalDB.addToHistory(track);
-
-    // 3. Fetch Stream
-    try {
-        const res = await fetch(`/api/stream?url=https://www.youtube.com/watch?v=${track.id}`);
-        const data = await res.json();
-        
-        if (data.stream_url && currentPlayer) {
-            currentPlayer.src = data.stream_url;
-            currentPlayer.load(); // Ensure new src is loaded
-            currentPlayer.play().catch(e => {
-                console.error("Autoplay Blocked:", e);
-                setPlaybackStatus("Tap to Play");
-            });
-            setMedianBackgroundAudio(true);
-        } else {
-            setPlaybackStatus("Stream Blocked/Error");
-        }
-    } catch (err) {
-        console.error("Streaming Error:", err);
-        setPlaybackStatus("Connection Error");
+    // 2. Claim Background Audio slot (OS TRICK)
+    if (nativeAudioEngine) {
+        // A very tiny silent audio snippet URL or a placeholder
+        // We use a high-stability CDN silent audio file
+        nativeAudioEngine.src = "https://www.soundjay.com/buttons/beep-01a.mp3"; 
+        nativeAudioEngine.volume = 0.01;
+        nativeAudioEngine.play().catch(e => console.log("Background claimed"));
     }
 
+    // 3. Play via YouTube IFrame (Stable, Instant)
+    if (ytPlayer && ytPlayer.loadVideoById) {
+        ytPlayer.loadVideoById(track.id);
+        ytPlayer.playVideo();
+        setMedianBackgroundAudio(true);
+    } else {
+        setPlaybackStatus("Engine starting...");
+        setTimeout(() => playTrack(track), 1000);
+    }
+
+    LocalDB.addToHistory(track);
     recentHistory.push(track);
     fetchUpNext(track);
 }
@@ -532,27 +560,30 @@ function updateMediaSession(track) {
             ]
         });
 
-        // ACTION HANDLERS
+        // ACTION HANDLERS (Bridged to YouTube Player)
         navigator.mediaSession.setActionHandler('play', () => togglePlay());
         navigator.mediaSession.setActionHandler('pause', () => togglePlay());
         navigator.mediaSession.setActionHandler('previoustrack', () => player.prev());
         navigator.mediaSession.setActionHandler('nexttrack', () => player.next());
         navigator.mediaSession.setActionHandler('seekto', (details) => {
-            if (currentPlayer) {
-                currentPlayer.currentTime = details.seekTime;
+            if (ytPlayer && ytPlayer.seekTo) {
+                ytPlayer.seekTo(details.seekTime);
             }
         });
     }
 }
 
 function togglePlay() {
-    if (!currentPlayer) return;
-    if (currentPlayer.paused) {
-        currentPlayer.play();
-        setMedianBackgroundAudio(true);
-    } else {
-        currentPlayer.pause();
+    if (!ytPlayer) return;
+    const state = ytPlayer.getPlayerState();
+    if (state === YT.PlayerState.PLAYING) {
+        ytPlayer.pauseVideo();
+        if (nativeAudioEngine) nativeAudioEngine.pause();
         setMedianBackgroundAudio(false);
+    } else {
+        ytPlayer.playVideo();
+        if (nativeAudioEngine) nativeAudioEngine.play();
+        setMedianBackgroundAudio(true);
     }
 }
 
@@ -582,17 +613,17 @@ function updatePlayPauseIcons(isPlaying) {
 }
 
 function seekTrack(value) {
-    if (!currentPlayer) return;
-    const duration = currentPlayer.duration;
+    if (!ytPlayer || !ytPlayer.getDuration) return;
+    const duration = ytPlayer.getDuration();
     const seekTo = (value / 100) * duration;
-    currentPlayer.currentTime = seekTo;
+    ytPlayer.seekTo(seekTo);
 }
 
-// Progress Tracker
+// Progress Tracker (Targeting YouTube Player)
 setInterval(() => {
-    if (currentPlayer && !currentPlayer.paused) {
-        const current = currentPlayer.currentTime;
-        const duration = currentPlayer.duration;
+    if (ytPlayer && ytPlayer.getCurrentTime) {
+        const current = ytPlayer.getCurrentTime();
+        const duration = ytPlayer.getDuration();
         const pct = (current / duration) * 100;
 
         const sliders = ['mini-progress', 'full-progress'];

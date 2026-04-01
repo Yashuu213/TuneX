@@ -218,9 +218,11 @@
         </div>
     </div>
 
-    <!-- Global YouTube Playback Engine -->
-    <!-- Native Audio Engine (Replaced YouTube IFrame for Background Play) -->
-    <audio id="main-audio-engine" style="display: none;"></audio>
+    <!-- Global YouTube Playback Engine (Hybrid Engine) -->
+    <div id="yt-player-hidden" style="position: absolute; top: -9999px; left: -9999px; width: 1px; height: 1px; pointer-events: none; opacity: 0;"></div>
+    
+    <!-- Native Audio Engine (Silent Keep-Alive for Mobile Background Play) -->
+    <audio id="main-audio-engine" loop style="display: none;"></audio>
 
     <script src="app.js"></script>
     <script>
