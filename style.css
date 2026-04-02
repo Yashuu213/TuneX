@@ -672,10 +672,17 @@ body {
     .control-btn.main { width: 44px; height: 44px; }
     .control-btn svg { width: 22px; height: 22px; }
     #main-content { padding: 15px; padding-bottom: 200px; }
-    .section-header { font-size: 26px; }
-    .card-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
-    .card { flex: 0 0 130px; padding: 10px; border-radius: 14px; }
-    .card-title { font-size: 13px; margin-bottom: 2px; }
+    .section-header { font-size: 26px; margin-bottom: 20px; }
+    
+    /* Premium Mobile Minimalist Cards (Spotify-style) */
+    .card-grid { grid-template-columns: repeat(2, 1fr); gap: 20px 12px; }
+    #home-rows .card-grid { gap: 14px; margin-bottom: 30px; } /* Horizontal rows tighter gap */
+    .card { flex: 0 0 135px; padding: 0; background: transparent; border: none; border-radius: 0; }
+    .card:hover { transform: none; background: transparent; border: none; box-shadow: none; }
+    .card-img-container { margin-bottom: 10px; border-radius: 12px; box-shadow: 0 6px 15px rgba(0,0,0,0.4); }
+    .card img { margin-bottom: 0; box-shadow: none; }
+    .card-title { font-size: 13.5px; line-height: 1.3; margin-bottom: 3px; font-weight: 700; }
+    .card .subtitle { font-size: 11px; margin-top: 0; letter-spacing: 0.3px; }
 }
 
 /* --- Ultra Small Screen (320px - iPhone SE) --- */
