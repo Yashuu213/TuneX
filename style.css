@@ -1019,7 +1019,7 @@ body:has(#full-player.visible) #bottom-nav {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
     background: #000; z-index: 10000;
     display: none; flex-direction: column;
-    overflow: hidden; /* Strict no horizontal scroll */
+    overflow-y: auto; overflow-x: hidden; /* Restored vertical scrolling */
     transition: transform 0.5s cubic-bezier(0.3, 0.8, 0.2, 1);
     transform: translateY(100%);
 }
@@ -1033,7 +1033,7 @@ body:has(#full-player.visible) #bottom-nav {
 
 .fp-container {
     position: relative; z-index: 10;
-    width: 100%; height: 100%;
+    width: 100%; min-height: 100%; height: max-content; /* Allow container to grow if scrolling */
     display: flex; flex-direction: column;
     padding: env(safe-area-inset-top, 15px) 24px env(safe-area-inset-bottom, 20px) 24px;
 }
@@ -1116,8 +1116,7 @@ body:has(#full-player.visible) #bottom-nav {
 }
 .fp-upnext-header { margin-bottom: 15px; }
 .fp-upnext-title { font-size: 15px; color: rgba(255,255,255,0.9); font-weight: 800; }
-.fp-upnext-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; padding-bottom: 20px; }
-.fp-upnext-scroll::-webkit-scrollbar { display: none; }
+.fp-upnext-scroll { overflow: visible; padding-bottom: 20px; }
 
 /* Very tiny phones (iPhone SE size) logic */
 @media (max-width: 380px), (max-height: 720px) {
