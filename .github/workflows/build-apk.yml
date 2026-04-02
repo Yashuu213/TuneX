@@ -31,11 +31,11 @@ jobs:
         run: npm run build
 
       - name: sync capacitor
-        run: npx cap sync android
+        run: npx cap sync android --verbose
 
       - name: build android release
         run: |
-          cd android && chmod +x gradlew && ./gradlew assembleDebug
+          cd android && chmod +x gradlew && ./gradlew assembleDebug --stacktrace --info
 
       - name: upload apk artifact
         uses: actions/upload-artifact@v4

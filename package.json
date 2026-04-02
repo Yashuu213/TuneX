@@ -8,7 +8,7 @@
     "cap:sync": "npx cap sync",
     "cap:add": "npx cap add android",
     "cap:copy": "npx cap copy",
-    "build": "mkdir -p www && cp index.html style.css app.js www/ && (cp *.png www/ || true) && (cp *.ico www/ || true) && (cp *.json www/ || true)"
+    "build": "python3 build_www.py"
   },
   "repository": {
     "type": "git",
