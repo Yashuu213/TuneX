@@ -35,7 +35,7 @@ jobs:
 
       - name: build android release
         run: |
-          cd android && ./gradlew assembleDebug
+          cd android && chmod +x gradlew && ./gradlew assembleDebug
 
       - name: upload apk artifact
         uses: actions/upload-artifact@v4
