@@ -87,8 +87,9 @@ class StorageManager:
 
     def save_home_cache(self, context, results):
         if not self.data.get("home_cache"): self.data["home_cache"] = {}
+        # We store this in-memory for the current session/runtime
+        # but we DON'T save it to data.json to prevent file bloat.
         self.data["home_cache"][context] = results
-        self.save_data()
 
     def get_home_cache(self, context):
         return self.data.get("home_cache", {}).get(context, [])

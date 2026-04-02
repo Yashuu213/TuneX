@@ -79,8 +79,8 @@ class StorageManager:
 
     def save_home_cache(self, context, results):
         if not self.data.get("home_cache"): self.data["home_cache"] = {}
+        # In-memory only for Vercel/Local stability
         self.data["home_cache"][context] = results
-        self.save_data()
 
     def get_home_cache(self, context):
         return self.data.get("home_cache", {}).get(context, [])
