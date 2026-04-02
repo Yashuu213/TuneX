@@ -1,0 +1,37 @@
+{
+  "name": "pikachu_web",
+  "version": "1.0.0",
+  "description": "![TuneX Hero](hero.png)",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "cap:sync": "npx cap sync",
+    "cap:add": "npx cap add android",
+    "cap:copy": "npx cap copy",
+    "build": "mkdir -p www && cp index.html style.css app.js *.png *.ico *.json www/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Yashuu213/TuneX.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Yashuu213/TuneX/issues"
+  },
+  "homepage": "https://github.com/Yashuu213/TuneX#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/cli": "^8.3.0",
+    "@capacitor/core": "^8.3.0",
+    "@capacitor/device": "^8.0.2",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/keyboard": "^8.0.2",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
+    "@capgo/capacitor-media-session": "^8.0.17"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "appId": "com.tunex.music",
+  "appName": "TuneX",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}

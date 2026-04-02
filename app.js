@@ -38,7 +38,7 @@ const player = {
         if (nextQueue.length > 0) {
             playTrack(nextQueue.shift());
         } else {
-            setMedianBackgroundAudio(false); 
+            setNativeBackgroundAudio(false); 
         }
     },
     prev: () => {
@@ -54,8 +54,16 @@ const player = {
 function playNext() { player.next(); }
 function playPrev() { player.prev(); }
 
-// Help Median.co (GoNative) handle background audio
-function setMedianBackgroundAudio(active) {
+// API Configuration: Point to Production Vercel if running in Native App
+const IS_CAPACITOR = window.Capacitor !== undefined;
+const BASE_URL = IS_CAPACITOR ? "https://tunex-app.vercel.app" : "";
+
+// Help Median.co (GoNative) or Capacitor handle background audio
+function setNativeBackgroundAudio(active) {
+    if (IS_CAPACITOR) {
+        // Capacitor handled via MediaSession plugin
+        return;
+    }
     const bridge = window.median || window.gonative;
     if (bridge && bridge.backgroundAudio) {
         if (active) bridge.backgroundAudio.start();
@@ -151,8 +159,8 @@ async function youtubeSearch(query, isTrending = false, isHome = false) {
 
     try {
         const url = isTrending
-            ? `/api/search?trending=true&home=${isHome}`
-            : `/api/search?q=${encodeURIComponent(query)}&home=${isHome}`;
+            ? `${BASE_URL}/api/search?trending=true&home=${isHome}`
+            : `${BASE_URL}/api/search?q=${encodeURIComponent(query)}&home=${isHome}`;
 
         const response = await fetch(url);
         const results = await response.json();
@@ -235,13 +243,13 @@ async function loadDashboard() {
     await Promise.all(priorities.map(async (cat) => {
         let r;
         if (cat.isRecommendation) {
-            const res = await fetch(`/api/recommendations?home=true&v=${seed}`);
+            const res = await fetch(`${BASE_URL}/api/recommendations?home=true&v=${seed}`);
             r = await res.json();
         } else {
             // Passing seed to ensure un-cached backend sampling
             const url = cat.isTrending ? 
-                `/api/search?trending=true&home=true&seed=${seed}` : 
-                `/api/search?q=${encodeURIComponent(cat.query)}&home=true&seed=${seed}`;
+                `${BASE_URL}/api/search?trending=true&home=true&seed=${seed}` : 
+                `${BASE_URL}/api/search?q=${encodeURIComponent(cat.query)}&home=true&seed=${seed}`;
             const res = await fetch(url);
             r = await res.json();
         }
@@ -302,7 +310,7 @@ async function renderGenreDiscovery(genre) {
     const query = genre === "Trending" ? "" : `${genre} viral songs latest 2026`;
     const isTrending = genre === "Trending";
 
-    const url = isTrending ? `/api/search?trending=true&v=${Date.now()}` : `/api/search?q=${encodeURIComponent(query)}&v=${Date.now()}`;
+    const url = isTrending ? `${BASE_URL}/api/search?trending=true&v=${Date.now()}` : `${BASE_URL}/api/search?q=${encodeURIComponent(query)}&v=${Date.now()}`;
     const res = await fetch(url);
     const results = await res.json();
     
@@ -322,7 +330,7 @@ async function loadTrending() {
 
     // Fetch a mix of India's most viral, most viewed and most trending (Strictly Latest)
     try {
-        const res = await fetch(`/api/search?trending=true&home=true&v=${Date.now()}`);
+        const res = await fetch(`${BASE_URL}/api/search?trending=true&home=true&v=${Date.now()}`);
         const results = await res.json();
         grid.innerHTML = '';
         renderCards(results, 'trending-grid');
@@ -363,7 +371,7 @@ async function renderArtists() {
 
         // If not in curated list, try fetching dynamic avatar as fallback
         if (!CURATED_ARTISTS[name]) {
-            fetch(`/api/artist_avatar?q=${encodeURIComponent(name)}`).then(res => res.json()).then(data => {
+            fetch(`${BASE_URL}/api/artist_avatar?q=${encodeURIComponent(name)}`).then(res => res.json()).then(data => {
                 if (data.url) document.getElementById(`artist-img-${safeName}`).src = data.url;
             });
         }
@@ -399,7 +407,7 @@ async function loadSearch() {
         const recGrid = document.getElementById('search-rec-grid');
         if (recGrid && recGrid.innerHTML === '') {
             recGrid.innerHTML = '<div class="loading">Finding vibes...</div>';
-            const res = await fetch(`/api/search?q=latest%20bollywood%20songs%202026&v=${Date.now()}`);
+            const res = await fetch(`${BASE_URL}/api/search?q=latest%20bollywood%20songs%202026&v=${Date.now()}`);
             const suggestions = await res.json();
             recGrid.innerHTML = '';
             renderCards(suggestions, 'search-rec-grid');
@@ -493,7 +501,7 @@ async function playTrack(track) {
     if (ytPlayer && ytPlayer.loadVideoById) {
         ytPlayer.loadVideoById(track.id);
         ytPlayer.playVideo();
-        setMedianBackgroundAudio(true);
+        setNativeBackgroundAudio(true);
     } else {
         setPlaybackStatus("Engine starting...");
         setTimeout(() => playTrack(track), 1000);
@@ -511,7 +519,7 @@ async function fetchUpNext(track) {
     // BETTER LOGIC: Search for artist's other hits instead of just "similar"
     // Also use negative filters to avoid remixes/reactions
     const seed = `best songs by ${track.uploader} -remix -reaction -cover`;
-    const res = await fetch(`/api/search?q=${encodeURIComponent(seed)}&limit=20`);
+    const res = await fetch(`${BASE_URL}/api/search?q=${encodeURIComponent(seed)}&limit=20`);
     let results = await res.json();
 
     if (results && results.length > 0) {
@@ -569,8 +577,22 @@ function updateUI(track) {
     lucide.createIcons();
 }
 
-function updateMediaSession(track) {
-    if ('mediaSession' in navigator) {
+async function updateMediaSession(track) {
+    if (IS_CAPACITOR) {
+        try {
+            const { CapacitorMediaSession } = Capacitor.Plugins;
+            await CapacitorMediaSession.setMetadata({
+                title: track.title,
+                artist: track.uploader,
+                album: 'TuneX Discovery',
+                artwork: track.thumbnail
+            });
+            CapacitorMediaSession.addListener('play', () => togglePlay());
+            CapacitorMediaSession.addListener('pause', () => togglePlay());
+            CapacitorMediaSession.addListener('next', () => playNext());
+            CapacitorMediaSession.addListener('previoustrack', () => playPrev());
+        } catch (e) { console.error("Capacitor Media Session error:", e); }
+    } else if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
             title: track.title,
             artist: track.uploader,
