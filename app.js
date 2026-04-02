@@ -464,7 +464,7 @@ function onYouTubeIframeAPIReady() {
 function onPlayerReady(event) { console.log("TuneX Engine Ready 🚀"); }
 
 function onPlayerStateChange(event) {
-    if (event.data === YT.PlayerState.ENDED) player.next();
+    if (event.data === YT.PlayerState.ENDED) playNext();
     updatePlayPauseIcons(event.data === YT.PlayerState.PLAYING);
     if (event.data === YT.PlayerState.PLAYING) setPlaybackStatus("");
     if (event.data === YT.PlayerState.BUFFERING) setPlaybackStatus("Buffering...");
@@ -572,56 +572,44 @@ function updateMediaSession(track) {
         navigator.mediaSession.metadata = new MediaMetadata({
             title: track.title,
             artist: track.uploader,
-            album: 'TuneX Premium',
+            short_title: 'TuneX',
             artwork: [
-                { src: track.thumbnail, sizes: '96x96',   type: 'image/jpeg' },
-                { src: track.thumbnail, sizes: '128x128', type: 'image/jpeg' },
-                { src: track.thumbnail, sizes: '192x192', type: 'image/jpeg' },
-                { src: track.thumbnail, sizes: '256x256', type: 'image/jpeg' },
-                { src: track.thumbnail, sizes: '384x384', type: 'image/jpeg' },
                 { src: track.thumbnail, sizes: '512x512', type: 'image/jpeg' },
+                { src: track.thumbnail, sizes: '192x192', type: 'image/jpeg' },
             ]
         });
 
-        // ACTION HANDLERS (Bridged to YouTube Player)
+        // ACTION HANDLERS (Connected to Dashboard Router)
         navigator.mediaSession.setActionHandler('play', () => togglePlay());
         navigator.mediaSession.setActionHandler('pause', () => togglePlay());
-        navigator.mediaSession.setActionHandler('previoustrack', () => player.prev());
-        navigator.mediaSession.setActionHandler('nexttrack', () => player.next());
+        navigator.mediaSession.setActionHandler('previoustrack', () => playPrev());
+        navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
         navigator.mediaSession.setActionHandler('seekto', (details) => {
-            if (ytPlayer && ytPlayer.seekTo) {
-                ytPlayer.seekTo(details.seekTime);
-            }
+            if (ytPlayer && ytPlayer.seekTo) ytPlayer.seekTo(details.seekTime);
         });
     }
 }
 
 function togglePlay() {
-    if (!ytPlayer) return;
+    if (!ytPlayer || !ytPlayer.getPlayerState) return;
     const state = ytPlayer.getPlayerState();
-    if (isPlaying) {
-        if (nativeAudioEngine) nativeAudioEngine.play().catch(() => {});
-        setMedianBackgroundAudio(true);
-    } else {
+    
+    if (state === YT.PlayerState.PLAYING) {
+        ytPlayer.pauseVideo();
         if (nativeAudioEngine) nativeAudioEngine.pause();
-        setMedianBackgroundAudio(false);
+        updatePlayPauseIcons(false);
+    } else {
+        ytPlayer.playVideo();
+        if (nativeAudioEngine) nativeAudioEngine.play().catch(() => {});
+        updatePlayPauseIcons(true);
     }
-
-    // Synchronize System Notification State (PRO feature for Mobile Apps)
-    if ('mediaSession' in navigator) {
-        navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
-    }
-
-    lucide.createIcons();
 }
 
 // Global Sync for the Silent Engine (Keeps app alive)
 if (nativeAudioEngine) {
     nativeAudioEngine.onplay = () => updatePlayPauseIcons(true);
     nativeAudioEngine.onpause = () => updatePlayPauseIcons(false);
-    nativeAudioEngine.onended = () => {
-        if (typeof nextTrack === 'function') nextTrack();
-    };
+    nativeAudioEngine.onended = () => playNext();
 }
 
 function updatePlayPauseIcons(isPlaying) {

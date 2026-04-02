@@ -219,10 +219,10 @@
     </div>
 
     <!-- Global YouTube Playback Engine (Hybrid Engine) -->
-    <div id="yt-player-hidden" style="position: absolute; top: -9999px; left: -9999px; width: 1px; height: 1px; pointer-events: none; opacity: 0;"></div>
+    <div id="yt-player-hidden" style="position: absolute; top: -999px; left: -999px; width: 1px; height: 1px; pointer-events: none; opacity: 0.01;"></div>
     
     <!-- Native Audio Engine (Silent Keep-Alive for Mobile Background Play) -->
-    <audio id="main-audio-engine" loop style="display: none;"></audio>
+    <audio id="main-audio-engine" loop preload="auto" style="display: none;"></audio>
 
     <script src="app.js"></script>
     <script>
