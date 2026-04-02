@@ -38,17 +38,21 @@ const player = {
         if (nextQueue.length > 0) {
             playTrack(nextQueue.shift());
         } else {
-            setMedianBackgroundAudio(false); // STOP SERVICE IF QUEUE ENDS
+            setMedianBackgroundAudio(false); 
         }
     },
     prev: () => {
         if (recentHistory.length > 1) {
-            recentHistory.pop(); // Remove current
+            recentHistory.pop(); 
             const prev = recentHistory.pop();
             if (prev) playTrack(prev);
         }
     }
 };
+
+// Global aliases for MediaSession and Handlers
+function playNext() { player.next(); }
+function playPrev() { player.prev(); }
 
 // Help Median.co (GoNative) handle background audio
 function setMedianBackgroundAudio(active) {
@@ -194,12 +198,10 @@ async function loadDashboard() {
     }
 
     const categories = [
-        { title: "For You ✨", isRecommendation: true },
-        { title: "Trending Now 🔥", query: "trending hindi viral songs 2026", isTrending: true },
         { title: "Romantic Hits 💖", query: "latest bollywood love songs 2026" },
         { title: "Party Anthems 🕺", query: "bollywood dance party hits 2026" },
         { title: "Lofi Vibes ☁️", query: "hindi lofi chill mix 2026" },
-        { title: "Viral Reels 🤳", query: "trending instagram reels songs hindi" },
+        { title: "Viral Reels 🤳", query: "trending instagram reels songs" },
         { title: "90s Golden Era 📻", query: "best 90s bollywood songs" },
         { title: "Punjabi Fresh 🚩", query: "new punjabi songs 2026 latest" },
         { title: "Workout Energy ⚡", query: "gym workout motivation songs hindi" },
@@ -215,7 +217,7 @@ async function loadDashboard() {
         row.innerHTML = `<h2 class="section-header">${cat.title}</h2><div class="card-grid" id="${rowId}"><div class="loading">Connecting...</div></div>`;
         rowsContainer.appendChild(row);
 
-        if (index === 1) {
+        if (index === 2) {
             const singerRow = document.createElement('div');
             singerRow.innerHTML = `<h2 class="section-header">Top Singers India 🌟</h2><div class="artist-grid" id="top-singers-row"></div>`;
             rowsContainer.appendChild(singerRow);
