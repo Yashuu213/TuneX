@@ -148,50 +148,54 @@
 
         <!-- Fullscreen Player Overlay (Modern Redesign) -->
         <div id="full-player">
-            <div class="ambient-glow-layer"></div>
+            <div id="fp-ambient" class="fp-ambient"></div>
             
-            <header class="full-header">
-                <button class="full-close-btn" onclick="closeFullPlayer()"><i data-lucide="chevron-down"></i></button>
-                <div class="full-header-text">Now Playing</div>
-                <div style="width: 50px;"></div> <!-- Spacer -->
-            </header>
-            
-            <div class="full-content">
-                <div class="full-art-container">
-                    <img src="logo.png" alt="Album Art" class="full-art" id="full-art">
+            <div class="fp-container">
+                <!-- Header -->
+                <header class="fp-header">
+                    <button class="fp-icon-btn" onclick="closeFullPlayer()"><i data-lucide="chevron-down"></i></button>
+                    <span class="fp-header-title">Now Playing</span>
+                    <button class="fp-icon-btn"><i data-lucide="more-horizontal"></i></button>
+                </header>
+
+                <!-- Artwork -->
+                <div class="fp-art-wrapper">
+                    <img src="logo.png" id="full-art" class="fp-art" alt="Album Art">
                 </div>
-                
-                <div class="full-details">
-                    <div class="full-info">
-                        <h1 class="full-title" id="full-title">TuneX Discovery</h1>
-                        <p class="full-artist" id="full-artist">Experience Premium Sound</p>
+
+                <!-- Info & Actions -->
+                <div class="fp-info-row">
+                    <div class="fp-text-group">
+                        <h2 id="full-title" class="fp-title">TuneX Discovery</h2>
+                        <p id="full-artist" class="fp-artist">Experience Premium Sound</p>
                     </div>
+                    <button class="fp-icon-btn highlight-btn" onclick="openPlaylistModal()"><i data-lucide="plus-circle"></i></button>
+                </div>
 
-                    <div class="full-player-controls">
-                        <div class="progress-area">
-                            <input type="range" id="full-progress" class="progress-slider" value="0" min="0" max="100" oninput="seekTrack(this.value)">
-                            <div class="time-container">
-                                <span id="current-time">0:00</span>
-                                <span id="total-time">0:00</span>
-                            </div>
-                        </div>
-
-                        <div class="playback-controls">
-                            <button class="ctrl-btn" onclick="player.prev()" title="Shuffle"><i data-lucide="shuffle"></i></button>
-                            <button class="ctrl-btn" onclick="player.prev()" title="Previous"><i data-lucide="skip-back"></i></button>
-                            <button class="ctrl-btn main-play" id="full-play-pause" onclick="togglePlay()" title="Play/Pause">
-                                <i data-lucide="play"></i>
-                            </button>
-                            <button class="ctrl-btn" onclick="player.next()" title="Next"><i data-lucide="skip-forward"></i></button>
-                            <button class="ctrl-btn" onclick="openPlaylistModal()" title="Add to Playlist"><i data-lucide="plus"></i></button>
-                            <button class="ctrl-btn" title="Repeat"><i data-lucide="repeat"></i></button>
-                        </div>
+                <!-- Scrubber -->
+                <div class="fp-scrubber">
+                    <input type="range" id="full-progress" class="fp-slider" value="0" min="0" max="100" oninput="seekTrack(this.value)">
+                    <div class="fp-time-row">
+                        <span id="current-time">0:00</span>
+                        <span id="total-time">0:00</span>
                     </div>
                 </div>
 
-                <div class="full-up-next-section">
-                    <h3>Up Next 🎧</h3>
-                    <div id="full-up-next-grid" class="up-next-list">
+                <!-- Master Controls -->
+                <div class="fp-controls">
+                    <button class="fp-ctrl-minor" onclick="player.prev()"><i data-lucide="shuffle"></i></button>
+                    <button class="fp-ctrl-major" onclick="player.prev()"><i data-lucide="skip-back"></i></button>
+                    <button class="fp-ctrl-play" id="full-play-pause" onclick="togglePlay()"><i data-lucide="play" fill="black"></i></button>
+                    <button class="fp-ctrl-major" onclick="player.next()"><i data-lucide="skip-forward"></i></button>
+                    <button class="fp-ctrl-minor"><i data-lucide="repeat"></i></button>
+                </div>
+
+                <!-- Up Next -->
+                <div class="fp-up-next">
+                    <div class="fp-upnext-header">
+                        <h4 class="fp-upnext-title">Up Next</h4>
+                    </div>
+                    <div id="full-up-next-grid" class="up-next-list fp-upnext-scroll">
                         <!-- Up Next tracks will be injected here -->
                     </div>
                 </div>

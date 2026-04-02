@@ -1011,3 +1011,124 @@ body:has(#full-player.visible) #bottom-nav {
     width: 36px !important;
     height: 36px !important;
 }
+
+/* ========================================================
+   NEW SCRATCH STRUCTURE: PREMIUM MOBILE FULL PLAYER
+   ======================================================== */
+#full-player {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
+    background: #000; z-index: 10000;
+    display: none; flex-direction: column;
+    overflow: hidden; /* Strict no horizontal scroll */
+    transition: transform 0.5s cubic-bezier(0.3, 0.8, 0.2, 1);
+    transform: translateY(100%);
+}
+#full-player.visible { display: flex; transform: translateY(0); }
+
+.fp-ambient {
+    position: absolute; inset: 0; z-index: 0;
+    background: radial-gradient(circle at 50% 10%, rgba(255,215,0,0.12) 0%, rgba(0,0,0,1) 50%);
+    filter: blur(60px);
+}
+
+.fp-container {
+    position: relative; z-index: 10;
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    padding: env(safe-area-inset-top, 15px) 24px env(safe-area-inset-bottom, 20px) 24px;
+}
+
+.fp-header {
+    flex-shrink: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding-top: 15px; padding-bottom: 20px;
+}
+.fp-header-title { font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 2px; }
+.fp-icon-btn { background: none; border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 5px; opacity: 0.8; }
+.fp-icon-btn svg { width: 22px; height: 22px; }
+
+.fp-art-wrapper {
+    flex-shrink: 0;
+    width: 100%; max-width: 400px;
+    margin: 0 auto 30px auto; 
+    aspect-ratio: 1/1; 
+    display: flex; justify-content: center; align-items: center;
+}
+.fp-art {
+    width: 100%; height: 100%; object-fit: cover;
+    border-radius: 12px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+    transition: transform 0.3s ease;
+}
+
+.fp-info-row {
+    flex-shrink: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 25px; width: 100%; max-width: 400px; margin-left: auto; margin-right: auto;
+}
+.fp-text-group { display: flex; flex-direction: column; flex: 1; padding-right: 15px; }
+
+.fp-title {
+    font-size: 1.3rem; font-weight: 800; color: #fff; line-height: 1.3; margin-bottom: 5px;
+    white-space: normal; word-wrap: break-word; overflow-wrap: break-word;
+}
+.fp-artist { 
+    font-size: 1rem; color: rgba(255,255,255,0.6); font-weight: 500;
+    white-space: normal;
+}
+.highlight-btn { color: #FFD700; opacity: 1; }
+
+.fp-scrubber { flex-shrink: 0; margin-bottom: 25px; width: 100%; max-width: 400px; margin-left: auto; margin-right: auto;}
+.fp-slider {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 6px; border-radius: 3px; overflow: hidden;
+    background: rgba(255,255,255,0.2); outline: none; margin-bottom: 10px; cursor: pointer;
+}
+.fp-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #fff; box-shadow: -100vw 0 0 100vw #FFD700;
+}
+.fp-time-row { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.5); }
+
+.fp-controls {
+    flex-shrink: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    width: 100%; max-width: 400px; margin: 0 auto 30px auto;
+}
+.fp-ctrl-minor { background: none; border: none; color: rgba(255,255,255,0.6); padding: 5px; cursor: pointer;}
+.fp-ctrl-minor svg { width: 22px; height: 22px; }
+
+.fp-ctrl-major { background: none; border: none; color: #fff; padding: 5px; cursor: pointer;}
+.fp-ctrl-major svg { width: 32px; height: 32px; fill: #fff; }
+
+.fp-ctrl-play {
+    background: #fff; color: #000; border: none;
+    width: 65px; height: 65px; border-radius: 50%;
+    display: flex; justify-content: center; align-items: center; cursor: pointer;
+    box-shadow: 0 10px 20px rgba(255,255,255,0.15);
+}
+.fp-ctrl-play svg { width: 28px; height: 28px; fill: #000; margin-left: 2px; }
+
+.fp-up-next {
+    flex: 1; display: flex; flex-direction: column; overflow: hidden;
+    width: 100%; max-width: 400px; margin: 0 auto;
+}
+.fp-upnext-header { margin-bottom: 15px; }
+.fp-upnext-title { font-size: 15px; color: rgba(255,255,255,0.9); font-weight: 800; }
+.fp-upnext-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; padding-bottom: 20px; }
+.fp-upnext-scroll::-webkit-scrollbar { display: none; }
+
+/* Very tiny phones (iPhone SE size) logic */
+@media (max-width: 380px), (max-height: 720px) {
+    .fp-container { padding: 10px 15px 15px 15px; }
+    .fp-art-wrapper { margin-bottom: 15px; width: 85%; }
+    .fp-info-row { margin-bottom: 15px; }
+    .fp-scrubber { margin-bottom: 15px; }
+    .fp-controls { margin-bottom: 15px; }
+    .fp-title { font-size: 1.15rem; }
+    .fp-artist { font-size: 0.85rem; }
+    .fp-ctrl-play { width: 55px; height: 55px; }
+    .fp-ctrl-major svg { width: 26px; height: 26px; }
+    .fp-ctrl-minor svg { width: 20px; height: 20px; }
+}
