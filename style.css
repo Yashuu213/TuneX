@@ -673,9 +673,9 @@ body {
     .control-btn svg { width: 22px; height: 22px; }
     #main-content { padding: 15px; padding-bottom: 200px; }
     .section-header { font-size: 26px; }
-    .card-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-    .card { flex: 0 0 160px; padding: 12px; border-radius: 16px; }
-    .card-title { font-size: 14px; }
+    .card-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+    .card { flex: 0 0 130px; padding: 10px; border-radius: 14px; }
+    .card-title { font-size: 13px; margin-bottom: 2px; }
 }
 
 /* --- Ultra Small Screen (320px - iPhone SE) --- */
