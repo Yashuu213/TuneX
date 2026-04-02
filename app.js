@@ -574,12 +574,12 @@ function updateMediaSession(track) {
             artist: track.uploader,
             album: 'TuneX Premium',
             artwork: [
-                { src: `/api/proxy_image?url=${encodeURIComponent(track.thumbnail)}`, sizes: '96x96',   type: 'image/jpeg' },
-                { src: `/api/proxy_image?url=${encodeURIComponent(track.thumbnail)}`, sizes: '128x128', type: 'image/jpeg' },
-                { src: `/api/proxy_image?url=${encodeURIComponent(track.thumbnail)}`, sizes: '192x192', type: 'image/jpeg' },
-                { src: `/api/proxy_image?url=${encodeURIComponent(track.thumbnail)}`, sizes: '256x256', type: 'image/jpeg' },
-                { src: `/api/proxy_image?url=${encodeURIComponent(track.thumbnail)}`, sizes: '384x384', type: 'image/jpeg' },
-                { src: `/api/proxy_image?url=${encodeURIComponent(track.thumbnail)}`, sizes: '512x512', type: 'image/jpeg' },
+                { src: track.thumbnail, sizes: '96x96',   type: 'image/jpeg' },
+                { src: track.thumbnail, sizes: '128x128', type: 'image/jpeg' },
+                { src: track.thumbnail, sizes: '192x192', type: 'image/jpeg' },
+                { src: track.thumbnail, sizes: '256x256', type: 'image/jpeg' },
+                { src: track.thumbnail, sizes: '384x384', type: 'image/jpeg' },
+                { src: track.thumbnail, sizes: '512x512', type: 'image/jpeg' },
             ]
         });
 
@@ -599,22 +599,29 @@ function updateMediaSession(track) {
 function togglePlay() {
     if (!ytPlayer) return;
     const state = ytPlayer.getPlayerState();
-    if (state === YT.PlayerState.PLAYING) {
-        ytPlayer.pauseVideo();
+    if (isPlaying) {
+        if (nativeAudioEngine) nativeAudioEngine.play().catch(() => {});
+        setMedianBackgroundAudio(true);
+    } else {
         if (nativeAudioEngine) nativeAudioEngine.pause();
         setMedianBackgroundAudio(false);
-    } else {
-        ytPlayer.playVideo();
-        if (nativeAudioEngine) nativeAudioEngine.play();
-        setMedianBackgroundAudio(true);
     }
+
+    // Synchronize System Notification State (PRO feature for Mobile Apps)
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+    }
+
+    lucide.createIcons();
 }
 
-// Event listeners for the native audio engine
-if (currentPlayer) {
-    currentPlayer.onplay = () => updatePlayPauseIcons(true);
-    currentPlayer.onpause = () => updatePlayPauseIcons(false);
-    currentPlayer.onended = () => player.next();
+// Global Sync for the Silent Engine (Keeps app alive)
+if (nativeAudioEngine) {
+    nativeAudioEngine.onplay = () => updatePlayPauseIcons(true);
+    nativeAudioEngine.onpause = () => updatePlayPauseIcons(false);
+    nativeAudioEngine.onended = () => {
+        if (typeof nextTrack === 'function') nextTrack();
+    };
 }
 
 function updatePlayPauseIcons(isPlaying) {
