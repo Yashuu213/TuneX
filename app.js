@@ -472,7 +472,7 @@ function onYouTubeIframeAPIReady() {
             'disablekb': 1,
             'fs': 0,
             'enablejsapi': 1,
-            'origin': window.location.origin
+            'origin': (window.location.protocol === 'https:') ? window.location.origin : 'https://www.youtube.com'
         },
         events: {
             'onReady': onPlayerReady,
@@ -483,11 +483,37 @@ function onYouTubeIframeAPIReady() {
 
 function onPlayerReady(event) { console.log("TuneX Engine Ready 🚀"); }
 
+let bufferingTimeout = null;
+
 function onPlayerStateChange(event) {
     if (event.data === YT.PlayerState.ENDED) playNext();
     updatePlayPauseIcons(event.data === YT.PlayerState.PLAYING);
-    if (event.data === YT.PlayerState.PLAYING) setPlaybackStatus("");
-    if (event.data === YT.PlayerState.BUFFERING) setPlaybackStatus("Buffering...");
+    
+    if (event.data === YT.PlayerState.PLAYING) {
+        setPlaybackStatus("");
+        if (bufferingTimeout) { clearTimeout(bufferingTimeout); bufferingTimeout = null; }
+    }
+    
+    if (event.data === YT.PlayerState.BUFFERING) {
+        setPlaybackStatus("Buffering...");
+        
+        // Muted Autoplay Hack: If stuck in buffering for > 3.5s, it's likely a WebView block
+        // We mute it to bypass the block, start the video, then unmute.
+        if (!bufferingTimeout) {
+            bufferingTimeout = setTimeout(() => {
+                if (ytPlayer && ytPlayer.getPlayerState && ytPlayer.getPlayerState() === YT.PlayerState.BUFFERING) {
+                    console.log("WebView Autoplay Block detected. Attempting Muted Bypass...");
+                    ytPlayer.mute();
+                    ytPlayer.playVideo();
+                    setTimeout(() => {
+                        ytPlayer.unMute();
+                        setPlaybackStatus("");
+                        console.log("Playback Restored.");
+                    }, 1500);
+                }
+            }, 3500);
+        }
+    }
 }
 
 async function playTrack(track) {
