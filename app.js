@@ -461,57 +461,15 @@ function initYouTubeAPI() {
 }
 
 function onYouTubeIframeAPIReady() {
-    ytPlayer = new YT.Player('yt-player-hidden', {
-        height: '200',
-        width: '300',
-        videoId: '',
-        playerVars: { 
-            'autoplay': 1, 
-            'playsinline': 1,
-            'controls': 0,
-            'disablekb': 1,
-            'fs': 0,
-            'enablejsapi': 1,
-            'origin': (window.location.protocol === 'https:') ? window.location.origin : 'https://www.youtube.com'
-        },
-        events: {
-            'onReady': onPlayerReady,
-            'onStateChange': onPlayerStateChange
-        }
-    });
+    // Deprecated for the new Native Engine
+    console.log("YouTube API Loaded (Back-up)");
 }
 
-function onPlayerReady(event) { console.log("TuneX Engine Ready 🚀"); }
+function onPlayerReady(event) { console.log("Engine Ready"); }
 
 let bufferingTimeout = null;
 
-function onPlayerStateChange(event) {
-    if (event.data === YT.PlayerState.ENDED) playNext();
-    updatePlayPauseIcons(event.data === YT.PlayerState.PLAYING);
-    
-    if (event.data === YT.PlayerState.PLAYING) {
-        setPlaybackStatus("");
-        if (bufferingTimeout) { clearTimeout(bufferingTimeout); bufferingTimeout = null; }
-    }
-    
-    if (event.data === YT.PlayerState.BUFFERING) {
-        setPlaybackStatus("Buffering...");
-        
-        // Final "200% Sure" Hack: If it stays buffering, force-rebuild the player status
-        if (!bufferingTimeout) {
-            bufferingTimeout = setTimeout(() => {
-                if (ytPlayer && ytPlayer.getPlayerState() === YT.PlayerState.BUFFERING) {
-                    console.log("Force Restarting Stream...");
-                    const currentTime = ytPlayer.getCurrentTime();
-                    ytPlayer.mute();
-                    ytPlayer.playVideo();
-                    ytPlayer.seekTo(currentTime || 0);
-                    setTimeout(() => { ytPlayer.unMute(); setPlaybackStatus(""); }, 1000);
-                }
-            }, 4000);
-        }
-    }
-}
+// The rest of the onPlayerStateChange is replaced by native audio events
 
 async function playTrack(track) {
     if (!track || !track.id) return;
@@ -519,34 +477,36 @@ async function playTrack(track) {
 
     // 1. UI Status
     updateUI(track);
-    setPlaybackStatus("Loading Fast CDN...");
+    setPlaybackStatus("Syncing Audio Link... ⚡");
     updateAmbientGlow(track.thumbnail);
 
-    // 2. Claim Background Audio slot (OS TRICK)
-    if (nativeAudioEngine) {
-        // Use Digital Silence (Base64) for ultra-stability (No dependence on URL fetch)
-        // This is a 1-second silent MP3 loop
-        nativeAudioEngine.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
-        nativeAudioEngine.play().catch(e => console.log("Background claimed"));
-    }
-
-    // 3. Play via YouTube IFrame (Stable, Instant)
-    if (ytPlayer && ytPlayer.loadVideoById) {
-        // FORCE KICK: Some WebViews need an extra poke to start the stream
-        ytPlayer.stopVideo();
-        ytPlayer.loadVideoById(track.id);
+    // 2. Direct Stream Fetch from Backend (Bypasses IFrame restrictions)
+    try {
+        const res = await fetch(`${BASE_URL}/api/stream?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${track.id}`)}`);
+        const data = await res.json();
         
-        // Android WebView Trick: Mute -> Play -> Wait -> Unmute
-        ytPlayer.mute();
-        ytPlayer.playVideo();
-        
-        setTimeout(() => {
-            ytPlayer.unMute();
-            setNativeBackgroundAudio(true);
-        }, 1500);
-    } else {
-        setPlaybackStatus("Engine starting...");
-        setTimeout(() => playTrack(track), 1000);
+        if (data.stream_url && nativeAudioEngine) {
+            nativeAudioEngine.src = data.stream_url;
+            nativeAudioEngine.load(); 
+            const playPromise = nativeAudioEngine.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    setPlaybackStatus(""); // Success
+                    setNativeBackgroundAudio(true);
+                }).catch(e => {
+                    console.log("Auto-play prevented. User click required.");
+                    setPlaybackStatus("Click Play to Start");
+                });
+            }
+        } else {
+            console.error("Stream error", data);
+            setPlaybackStatus("Re-trying Secure Link...");
+            setTimeout(() => playTrack(track), 2000);
+        }
+    } catch (e) {
+        console.error("Backend unreachable", e);
+        setPlaybackStatus("Server Connecting...");
     }
 
     LocalDB.addToHistory(track);
@@ -660,16 +620,12 @@ async function updateMediaSession(track) {
 }
 
 function togglePlay() {
-    if (!ytPlayer || !ytPlayer.getPlayerState) return;
-    const state = ytPlayer.getPlayerState();
-    
-    if (state === YT.PlayerState.PLAYING) {
-        ytPlayer.pauseVideo();
-        if (nativeAudioEngine) nativeAudioEngine.pause();
+    if (!nativeAudioEngine) return;
+    if (!nativeAudioEngine.paused) {
+        nativeAudioEngine.pause();
         updatePlayPauseIcons(false);
     } else {
-        ytPlayer.playVideo();
-        if (nativeAudioEngine) nativeAudioEngine.play().catch(() => {});
+        nativeAudioEngine.play().catch(() => {});
         updatePlayPauseIcons(true);
     }
 }
@@ -679,6 +635,8 @@ if (nativeAudioEngine) {
     nativeAudioEngine.onplay = () => updatePlayPauseIcons(true);
     nativeAudioEngine.onpause = () => updatePlayPauseIcons(false);
     nativeAudioEngine.onended = () => playNext();
+    nativeAudioEngine.onwaiting = () => setPlaybackStatus("Buffering Stream...");
+    nativeAudioEngine.onplaying = () => setPlaybackStatus("");
 }
 
 function updatePlayPauseIcons(isPlaying) {
@@ -700,17 +658,17 @@ function updatePlayPauseIcons(isPlaying) {
 }
 
 function seekTrack(value) {
-    if (!ytPlayer || !ytPlayer.getDuration) return;
-    const duration = ytPlayer.getDuration();
+    if (!nativeAudioEngine || isNaN(nativeAudioEngine.duration)) return;
+    const duration = nativeAudioEngine.duration;
     const seekTo = (value / 100) * duration;
-    ytPlayer.seekTo(seekTo);
+    nativeAudioEngine.currentTime = seekTo;
 }
 
-// Progress Tracker (Targeting YouTube Player)
+// Progress Tracker (Targeting Native Audio Engine)
 setInterval(() => {
-    if (ytPlayer && ytPlayer.getCurrentTime) {
-        const current = ytPlayer.getCurrentTime();
-        const duration = ytPlayer.getDuration();
+    if (nativeAudioEngine && nativeAudioEngine.duration) {
+        const current = nativeAudioEngine.currentTime;
+        const duration = nativeAudioEngine.duration;
         const pct = (current / duration) * 100;
 
         const sliders = ['mini-progress', 'full-progress'];
