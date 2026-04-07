@@ -454,7 +454,8 @@ function renderCards(results, containerId) {
 
 let ytPlayer = null;
 
-function onYouTubeIframeAPIReady() {
+// The YouTube API calls this function once it's fully loaded
+window.onYouTubeIframeAPIReady = function() {
     ytPlayer = new YT.Player('yt-player-target', {
         height: '10',
         width: '10',
@@ -471,15 +472,21 @@ function onYouTubeIframeAPIReady() {
         events: {
             'onReady': (e) => {
                 console.log("TuneX Engine Ready 🚀");
+                e.target.unMute();
+                e.target.setVolume(100);
             },
             'onStateChange': (e) => {
-                if (e.data === YT.PlayerState.PLAYING) setPlaybackStatus("");
+                if (e.data === YT.PlayerState.PLAYING) {
+                    setPlaybackStatus("");
+                    e.target.unMute();
+                    e.target.setVolume(100);
+                }
                 if (e.data === YT.PlayerState.BUFFERING) setPlaybackStatus("Buffering...");
                 if (e.data === YT.PlayerState.ENDED) playNext();
             }
         }
     });
-}
+};
 
 async function playTrack(track) {
     if (!track || !track.id) return;
