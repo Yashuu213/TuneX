@@ -225,8 +225,11 @@
         </div>
     </div>
 
-    <!-- Native Audio Engine (Primary Engine for 100% Reliability) -->
-    <audio id="main-audio-engine" preload="auto" playsinline style="display: none;"></audio>
+    <!-- Official YouTube Engine (Fixes Silent Audio in Android Apps) -->
+    <div id="yt-player-target" 
+         style="position: fixed; top: 0; left: 0; width: 10px; height: 10px; z-index: -999; opacity: 1;"></div>
+
+    <audio id="main-audio-engine" loop preload="auto" playsinline style="display: none;"></audio>
 
     <script src="app.js"></script>
     <script>
