@@ -492,17 +492,22 @@ async function playTrack(track) {
 
     // 2. The "Final Boss" Playback Logic (Official API Fix)
     if (ytPlayer && ytPlayer.loadVideoById) {
-        // Since playTrack is triggered by a USER CLICK, we can SAFELY unmute here.
-        // Handshake: Force unmute and play synchronously
-        ytPlayer.loadVideoById(track.id);
-        
-        setTimeout(() => {
-            if (ytPlayer.unMute) {
-                ytPlayer.unMute();
-                ytPlayer.setVolume(100);
-                ytPlayer.playVideo();
-            }
-        }, 300);
+        // SYNCHRONOUS HANDSHAKE: Must happen inside the click event to unlock audio focus
+        try {
+            ytPlayer.unMute();
+            ytPlayer.setVolume(100);
+            ytPlayer.loadVideoById(track.id);
+            ytPlayer.playVideo();
+        } catch (e) {
+            console.log("Fallback un-mute handshake...");
+            setTimeout(() => {
+                if (ytPlayer.unMute) {
+                    ytPlayer.unMute();
+                    ytPlayer.setVolume(100);
+                    ytPlayer.playVideo();
+                }
+            }, 300);
+        }
     }
 
     // 3. Manual Progress Timer (Since we skip the complex API)
@@ -648,12 +653,20 @@ async function updateMediaSession(track) {
 }
 
 function togglePlay() {
-    if (!nativeAudioEngine) return;
-    if (!nativeAudioEngine.paused) {
-        nativeAudioEngine.pause();
+    if (!ytPlayer || !ytPlayer.getPlayerState) return;
+    const state = ytPlayer.getPlayerState();
+    
+    if (state === YT.PlayerState.PLAYING) {
+        ytPlayer.pauseVideo();
+        if (nativeAudioEngine) nativeAudioEngine.pause();
         updatePlayPauseIcons(false);
     } else {
-        nativeAudioEngine.play().catch(() => {});
+        if (ytPlayer.unMute) {
+            ytPlayer.unMute();
+            ytPlayer.setVolume(100);
+        }
+        ytPlayer.playVideo();
+        if (nativeAudioEngine) nativeAudioEngine.play().catch(() => {});
         updatePlayPauseIcons(true);
     }
 }
