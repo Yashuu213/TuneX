@@ -689,7 +689,7 @@ function togglePlay() {
             ytPlayer.setVolume(100);
         }
         ytPlayer.playVideo();
-        if (nativeAudioEngine) nativeAudioEngine.play().catch(() => {});
+        // Removed nativeAudioEngine.play() here to prevent focus theft
         updatePlayPauseIcons(true);
     }
 }
@@ -722,10 +722,13 @@ function updatePlayPauseIcons(isPlaying) {
 }
 
 function seekTrack(value) {
-    if (!nativeAudioEngine || isNaN(nativeAudioEngine.duration)) return;
-    const duration = nativeAudioEngine.duration;
+    if (!ytPlayer || !ytPlayer.getDuration) return;
+    const duration = ytPlayer.getDuration();
+    if (!duration) return;
     const seekTo = (value / 100) * duration;
-    nativeAudioEngine.currentTime = seekTo;
+    
+    ytPlayer.seekTo(seekTo, true);
+    currentSeconds = Math.floor(seekTo); // Sync manual timer
 }
 
 // Old Progress Tracker Removed (Now using startProgressTimer for 100% Sync)
