@@ -99,11 +99,16 @@ window.onYouTubeIframeAPIReady = function() {
             'onStateChange': (e) => {
                 if (e.data === YT.PlayerState.PLAYING) {
                     setPlaybackStatus("");
+                    // Final Voice Restoration Handshake
                     e.target.unMute();
                     e.target.setVolume(100);
+                    if (nativeAudioEngine) nativeAudioEngine.pause(); // Release Focus
                 }
-                if (e.data === YT.PlayerState.BUFFERING) setPlaybackStatus("Buffering...");
-                if (e.data === YT.PlayerState.ENDED) playNext();
+                if (e.data === YT.PlayerState.BUFFERING) setPlaybackStatus("Buffering Stream...");
+                if (e.data === YT.PlayerState.ENDED) {
+                    if (nativeAudioEngine) nativeAudioEngine.play().catch(() => {}); // Re-claim focus
+                    playNext();
+                }
             }
         }
     });
@@ -509,15 +514,15 @@ async function playTrack(track) {
 
     // 2. The "Final Boss" Playback Logic (Official API Fix)
     if (ytPlayer && ytPlayer.loadVideoById) {
-        // SYNCHRONOUS HANDSHAKE: Must happen inside the click event to unlock audio focus
+        // SYNCHRONOUS HANDSHAKE: Must happen inside the click event to unlock audio
         try {
-            if (nativeAudioEngine) nativeAudioEngine.pause(); // Release focus for YouTube
+            if (nativeAudioEngine) nativeAudioEngine.pause(); // Release Focus
             ytPlayer.unMute();
             ytPlayer.setVolume(100);
             ytPlayer.loadVideoById(track.id);
             ytPlayer.playVideo();
         } catch (e) {
-            console.log("Fallback un-mute handshake...");
+            console.log("Handshake Delay Fallback");
             setTimeout(() => {
                 if (ytPlayer.unMute) {
                     ytPlayer.unMute();
@@ -723,25 +728,7 @@ function seekTrack(value) {
     nativeAudioEngine.currentTime = seekTo;
 }
 
-// Progress Tracker (Targeting Native Audio Engine)
-setInterval(() => {
-    if (nativeAudioEngine && nativeAudioEngine.duration) {
-        const current = nativeAudioEngine.currentTime;
-        const duration = nativeAudioEngine.duration;
-        const pct = (current / duration) * 100;
-
-        const sliders = ['mini-progress', 'full-progress'];
-        sliders.forEach(id => {
-            const s = document.getElementById(id);
-            if (s) s.value = pct || 0;
-        });
-
-        const ct = document.getElementById('current-time');
-        const tt = document.getElementById('total-time');
-        if (ct) ct.textContent = formatTime(current);
-        if (tt) tt.textContent = formatTime(duration);
-    }
-}, 1000);
+// Old Progress Tracker Removed (Now using startProgressTimer for 100% Sync)
 
 function formatTime(s) {
     if (!s || isNaN(s)) return "0:00";
