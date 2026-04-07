@@ -71,7 +71,7 @@ function setNativeBackgroundAudio(active) {
     }
 }
 
-let ytPlayer = null;
+// Global Audio/Video Players
 let nativeAudioEngine = null;
 
 // --- 1. Initialization ---
@@ -452,24 +452,34 @@ function renderCards(results, containerId) {
     lucide.createIcons();
 }
 
-// --- 3. Player Engine & Playback ---
-function initYouTubeAPI() {
-    const tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-}
+let ytPlayer = null;
 
 function onYouTubeIframeAPIReady() {
-    // Deprecated for the new Native Engine
-    console.log("YouTube API Loaded (Back-up)");
+    ytPlayer = new YT.Player('yt-player-target', {
+        height: '10',
+        width: '10',
+        playerVars: {
+            'playsinline': 1,
+            'controls': 0,
+            'disablekb': 1,
+            'modestbranding': 1,
+            'rel': 0,
+            'autoplay': 1,
+            'origin': window.location.origin,
+            'enablejsapi': 1
+        },
+        events: {
+            'onReady': (e) => {
+                console.log("TuneX Engine Ready 🚀");
+            },
+            'onStateChange': (e) => {
+                if (e.data === YT.PlayerState.PLAYING) setPlaybackStatus("");
+                if (e.data === YT.PlayerState.BUFFERING) setPlaybackStatus("Buffering...");
+                if (e.data === YT.PlayerState.ENDED) playNext();
+            }
+        }
+    });
 }
-
-function onPlayerReady(event) { console.log("Engine Ready"); }
-
-let bufferingTimeout = null;
-
-// The rest of the onPlayerStateChange is replaced by native audio events
 
 async function playTrack(track) {
     if (!track || !track.id) return;
@@ -477,41 +487,59 @@ async function playTrack(track) {
 
     // 1. UI Status
     updateUI(track);
-    setPlaybackStatus("Syncing Audio Link... ⚡");
+    setPlaybackStatus(""); 
     updateAmbientGlow(track.thumbnail);
 
-    // 2. Direct Stream Fetch from Backend (Bypasses IFrame restrictions)
-    try {
-        const res = await fetch(`${BASE_URL}/api/stream?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${track.id}`)}`);
-        const data = await res.json();
+    // 2. The "Final Boss" Playback Logic (Official API Fix)
+    if (ytPlayer && ytPlayer.loadVideoById) {
+        // Since playTrack is triggered by a USER CLICK, we can SAFELY unmute here.
+        // Handshake: Force unmute and play synchronously
+        ytPlayer.loadVideoById(track.id);
         
-        if (data.stream_url && nativeAudioEngine) {
-            nativeAudioEngine.src = data.stream_url;
-            nativeAudioEngine.load(); 
-            const playPromise = nativeAudioEngine.play();
-            
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    setPlaybackStatus(""); // Success
-                    setNativeBackgroundAudio(true);
-                }).catch(e => {
-                    console.log("Auto-play prevented. User click required.");
-                    setPlaybackStatus("Click Play to Start");
-                });
+        setTimeout(() => {
+            if (ytPlayer.unMute) {
+                ytPlayer.unMute();
+                ytPlayer.setVolume(100);
+                ytPlayer.playVideo();
             }
-        } else {
-            console.error("Stream error", data);
-            setPlaybackStatus("Re-trying Secure Link...");
-            setTimeout(() => playTrack(track), 2000);
-        }
-    } catch (e) {
-        console.error("Backend unreachable", e);
-        setPlaybackStatus("Server Connecting...");
+        }, 300);
     }
+
+    // 3. Manual Progress Timer (Since we skip the complex API)
+    startProgressTimer(track.duration || 180); // Fallback to 3m
 
     LocalDB.addToHistory(track);
     recentHistory.push(track);
     fetchUpNext(track);
+}
+
+let songTimer = null;
+let currentSeconds = 0;
+
+function startProgressTimer(duration) {
+    if (songTimer) clearInterval(songTimer);
+    currentSeconds = 0;
+    
+    songTimer = setInterval(() => {
+        currentSeconds++;
+        const pct = (currentSeconds / duration) * 100;
+        
+        const sliders = ['mini-progress', 'full-progress'];
+        sliders.forEach(id => {
+            const s = document.getElementById(id);
+            if (s) s.value = pct || 0;
+        });
+
+        const ct = document.getElementById('current-time');
+        const tt = document.getElementById('total-time');
+        if (ct) ct.textContent = formatTime(currentSeconds);
+        if (tt) tt.textContent = formatTime(duration);
+
+        if (currentSeconds >= duration) {
+            clearInterval(songTimer);
+            playNext();
+        }
+    }, 1000);
 }
 
 async function fetchUpNext(track) {
