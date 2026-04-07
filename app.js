@@ -87,6 +87,14 @@ window.onload = () => {
     loadDashboard();
     setupEventListeners();
     updateGreeting();
+
+    // Unlock Audio Context on first click (Vital for Mobile Apps/WebViews)
+    document.addEventListener('click', () => {
+        if (nativeAudioEngine && nativeAudioEngine.paused) {
+            nativeAudioEngine.play().catch(() => {});
+            console.log("Audio Context Unlocked 🔓");
+        }
+    }, { once: true });
 };
 
 function setPlaybackStatus(status) {
@@ -462,7 +470,9 @@ function onYouTubeIframeAPIReady() {
             'playsinline': 1,
             'controls': 0,
             'disablekb': 1,
-            'fs': 0
+            'fs': 0,
+            'enablejsapi': 1,
+            'origin': window.location.origin
         },
         events: {
             'onReady': onPlayerReady,
