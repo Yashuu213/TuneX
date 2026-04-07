@@ -745,6 +745,18 @@ function closeFullPlayer() {
 
 
 
+function initYouTubeAPI() {
+    // API script is already in index.html, we just need to ensure the variable exists
+    if (typeof YT === 'undefined') {
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    }
+}
+
+let ytPlayer = null;
+
 // --- 6. Playlist Discovery & Management ---
 let trackToSave = null;
 
