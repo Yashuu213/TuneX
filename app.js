@@ -73,6 +73,50 @@ function setNativeBackgroundAudio(active) {
 
 // Global Audio/Video Players
 let nativeAudioEngine = null;
+let ytPlayer = null;
+
+// The YouTube API calls this function once it's fully loaded
+window.onYouTubeIframeAPIReady = function() {
+    ytPlayer = new YT.Player('yt-player-target', {
+        height: '20',
+        width: '20',
+        playerVars: {
+            'playsinline': 1,
+            'controls': 0,
+            'disablekb': 1,
+            'modestbranding': 1,
+            'rel': 0,
+            'autoplay': 1,
+            'origin': window.location.origin,
+            'enablejsapi': 1
+        },
+        events: {
+            'onReady': (e) => {
+                console.log("TuneX Engine Ready 🚀");
+                e.target.unMute();
+                e.target.setVolume(100);
+            },
+            'onStateChange': (e) => {
+                if (e.data === YT.PlayerState.PLAYING) {
+                    setPlaybackStatus("");
+                    e.target.unMute();
+                    e.target.setVolume(100);
+                }
+                if (e.data === YT.PlayerState.BUFFERING) setPlaybackStatus("Buffering...");
+                if (e.data === YT.PlayerState.ENDED) playNext();
+            }
+        }
+    });
+};
+
+function initYouTubeAPI() {
+    if (typeof YT === 'undefined') {
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    }
+}
 
 // --- 1. Initialization ---
 window.onload = () => {
@@ -452,41 +496,7 @@ function renderCards(results, containerId) {
     lucide.createIcons();
 }
 
-let ytPlayer = null;
-
-// The YouTube API calls this function once it's fully loaded
-window.onYouTubeIframeAPIReady = function() {
-    ytPlayer = new YT.Player('yt-player-target', {
-        height: '10',
-        width: '10',
-        playerVars: {
-            'playsinline': 1,
-            'controls': 0,
-            'disablekb': 1,
-            'modestbranding': 1,
-            'rel': 0,
-            'autoplay': 1,
-            'origin': window.location.origin,
-            'enablejsapi': 1
-        },
-        events: {
-            'onReady': (e) => {
-                console.log("TuneX Engine Ready 🚀");
-                e.target.unMute();
-                e.target.setVolume(100);
-            },
-            'onStateChange': (e) => {
-                if (e.data === YT.PlayerState.PLAYING) {
-                    setPlaybackStatus("");
-                    e.target.unMute();
-                    e.target.setVolume(100);
-                }
-                if (e.data === YT.PlayerState.BUFFERING) setPlaybackStatus("Buffering...");
-                if (e.data === YT.PlayerState.ENDED) playNext();
-            }
-        }
-    });
-};
+// YouTube Engine logic moved to top for reliability
 
 async function playTrack(track) {
     if (!track || !track.id) return;
@@ -501,6 +511,7 @@ async function playTrack(track) {
     if (ytPlayer && ytPlayer.loadVideoById) {
         // SYNCHRONOUS HANDSHAKE: Must happen inside the click event to unlock audio focus
         try {
+            if (nativeAudioEngine) nativeAudioEngine.pause(); // Release focus for YouTube
             ytPlayer.unMute();
             ytPlayer.setVolume(100);
             ytPlayer.loadVideoById(track.id);
@@ -752,17 +763,7 @@ function closeFullPlayer() {
 
 
 
-function initYouTubeAPI() {
-    // API script is already in index.html, we just need to ensure the variable exists
-    if (typeof YT === 'undefined') {
-        const tag = document.createElement('script');
-        tag.src = "https://www.youtube.com/iframe_api";
-        const firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-    }
-}
-
-let ytPlayer = null;
+// initYouTubeAPI moved to top
 
 // --- 6. Playlist Discovery & Management ---
 let trackToSave = null;
