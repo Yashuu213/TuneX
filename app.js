@@ -462,8 +462,8 @@ function initYouTubeAPI() {
 
 function onYouTubeIframeAPIReady() {
     ytPlayer = new YT.Player('yt-player-hidden', {
-        height: '0',
-        width: '0',
+        height: '200',
+        width: '300',
         videoId: '',
         playerVars: { 
             'autoplay': 1, 
@@ -497,21 +497,18 @@ function onPlayerStateChange(event) {
     if (event.data === YT.PlayerState.BUFFERING) {
         setPlaybackStatus("Buffering...");
         
-        // Muted Autoplay Hack: If stuck in buffering for > 3.5s, it's likely a WebView block
-        // We mute it to bypass the block, start the video, then unmute.
+        // Final "200% Sure" Hack: If it stays buffering, force-rebuild the player status
         if (!bufferingTimeout) {
             bufferingTimeout = setTimeout(() => {
-                if (ytPlayer && ytPlayer.getPlayerState && ytPlayer.getPlayerState() === YT.PlayerState.BUFFERING) {
-                    console.log("WebView Autoplay Block detected. Attempting Muted Bypass...");
+                if (ytPlayer && ytPlayer.getPlayerState() === YT.PlayerState.BUFFERING) {
+                    console.log("Force Restarting Stream...");
+                    const currentTime = ytPlayer.getCurrentTime();
                     ytPlayer.mute();
                     ytPlayer.playVideo();
-                    setTimeout(() => {
-                        ytPlayer.unMute();
-                        setPlaybackStatus("");
-                        console.log("Playback Restored.");
-                    }, 1500);
+                    ytPlayer.seekTo(currentTime || 0);
+                    setTimeout(() => { ytPlayer.unMute(); setPlaybackStatus(""); }, 1000);
                 }
-            }, 3500);
+            }, 4000);
         }
     }
 }
@@ -535,9 +532,18 @@ async function playTrack(track) {
 
     // 3. Play via YouTube IFrame (Stable, Instant)
     if (ytPlayer && ytPlayer.loadVideoById) {
+        // FORCE KICK: Some WebViews need an extra poke to start the stream
+        ytPlayer.stopVideo();
         ytPlayer.loadVideoById(track.id);
+        
+        // Android WebView Trick: Mute -> Play -> Wait -> Unmute
+        ytPlayer.mute();
         ytPlayer.playVideo();
-        setNativeBackgroundAudio(true);
+        
+        setTimeout(() => {
+            ytPlayer.unMute();
+            setNativeBackgroundAudio(true);
+        }, 1500);
     } else {
         setPlaybackStatus("Engine starting...");
         setTimeout(() => playTrack(track), 1000);
@@ -632,21 +638,24 @@ async function updateMediaSession(track) {
         navigator.mediaSession.metadata = new MediaMetadata({
             title: track.title,
             artist: track.uploader,
-            short_title: 'TuneX',
+            album: 'TuneX Premium',
             artwork: [
                 { src: track.thumbnail, sizes: '512x512', type: 'image/jpeg' },
                 { src: track.thumbnail, sizes: '192x192', type: 'image/jpeg' },
             ]
         });
 
-        // ACTION HANDLERS (Connected to Dashboard Router)
-        navigator.mediaSession.setActionHandler('play', () => togglePlay());
-        navigator.mediaSession.setActionHandler('pause', () => togglePlay());
-        navigator.mediaSession.setActionHandler('previoustrack', () => playPrev());
-        navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
-        navigator.mediaSession.setActionHandler('seekto', (details) => {
-            if (ytPlayer && ytPlayer.seekTo) ytPlayer.seekTo(details.seekTime);
-        });
+        // ACTION HANDLERS (One-time registration)
+        if (!window.mediaHandlersSet) {
+            navigator.mediaSession.setActionHandler('play', () => togglePlay());
+            navigator.mediaSession.setActionHandler('pause', () => togglePlay());
+            navigator.mediaSession.setActionHandler('previoustrack', () => playPrev());
+            navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
+            navigator.mediaSession.setActionHandler('seekto', (details) => {
+                if (ytPlayer && ytPlayer.seekTo) ytPlayer.seekTo(details.seekTime);
+            });
+            window.mediaHandlersSet = true;
+        }
     }
 }
 

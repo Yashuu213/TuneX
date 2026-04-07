@@ -226,7 +226,7 @@
     </div>
 
     <!-- Global YouTube Playback Engine (Hybrid Engine) -->
-    <div id="yt-player-hidden" style="position: absolute; top: -999px; left: -999px; width: 1px; height: 1px; pointer-events: none; opacity: 0.01;"></div>
+    <div id="yt-player-hidden" style="position: fixed; top: 0; left: 0; width: 300px; height: 200px; z-index: -10; opacity: 0.01; overflow: hidden;"></div>
     
     <!-- Native Audio Engine (Silent Keep-Alive for Mobile Background Play) -->
     <audio id="main-audio-engine" loop preload="auto" playsinline style="display: none;"></audio>
