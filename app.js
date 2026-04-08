@@ -74,6 +74,8 @@ function setNativeBackgroundAudio(active) {
 // Global Audio/Video Players
 let nativeAudioEngine = null;
 let ytPlayer = null;
+let isPlayerReady = false;
+let pendingTrack = null;
 
 // The YouTube API calls this function once it's fully loaded
 window.onYouTubeIframeAPIReady = function() {
@@ -92,8 +94,20 @@ window.onYouTubeIframeAPIReady = function() {
         events: {
             'onReady': (e) => {
                 console.log("TuneX Engine Ready 🚀");
+                isPlayerReady = true;
                 e.target.unMute();
                 e.target.setVolume(100);
+                
+                // Play queued track if any
+                if (pendingTrack) {
+                    playTrack(pendingTrack);
+                    pendingTrack = null;
+                }
+            },
+            'onError': (e) => {
+                console.warn("TuneX Stream Error:", e.data);
+                setPlaybackStatus("Retrying next track...");
+                playNext(); // Auto-skip restricted/broken songs
             },
             'onStateChange': (e) => {
                 if (e.data === YT.PlayerState.PLAYING) {
@@ -523,11 +537,11 @@ async function playTrack(track) {
 
     // 1. UI Status
     updateUI(track);
-    setPlaybackStatus(""); 
+    setPlaybackStatus("Loading Stream..."); 
     updateAmbientGlow(track.thumbnail);
 
     // 2. The "Final Boss" Playback Logic (Official API Fix)
-    if (ytPlayer && ytPlayer.loadVideoById) {
+    if (ytPlayer && isPlayerReady) {
         // SYNCHRONOUS HANDSHAKE: Must happen inside the click event to unlock audio
         try {
             if (nativeAudioEngine) nativeAudioEngine.pause(); // Release Focus
@@ -536,15 +550,14 @@ async function playTrack(track) {
             ytPlayer.loadVideoById(track.id);
             ytPlayer.playVideo();
         } catch (e) {
-            console.log("Handshake Delay Fallback");
-            setTimeout(() => {
-                if (ytPlayer.unMute) {
-                    ytPlayer.unMute();
-                    ytPlayer.setVolume(100);
-                    ytPlayer.playVideo();
-                }
-            }, 300);
+            console.log("Handshake Fallback");
+            ytPlayer.loadVideoById(track.id);
+            ytPlayer.playVideo();
         }
+    } else {
+        console.log("Engine not ready. Queuing track...");
+        pendingTrack = track;
+        initYouTubeAPI(); // Ensure it starts loading
     }
 
     // 3. Manual Progress Timer (Since we skip the complex API)
