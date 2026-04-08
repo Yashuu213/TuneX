@@ -511,6 +511,10 @@ async function loadSearch() {
 function renderCards(results, containerId) {
     const container = document.getElementById(containerId);
     if (!container || !results) return;
+    
+    // Performance Optimization: Use DocumentFragment to prevent 60 separate reflows
+    const fragment = document.createDocumentFragment();
+    
     results.slice(0, 60).forEach(track => {
         const card = document.createElement('div');
         card.className = 'card track-card';
@@ -530,8 +534,10 @@ function renderCards(results, containerId) {
         card.onclick = (e) => {
             if (!e.target.closest('.card-plus-btn')) playTrack(track);
         };
-        container.appendChild(card);
+        fragment.appendChild(card);
     });
+    
+    container.appendChild(fragment);
     lucide.createIcons();
 }
 
@@ -955,11 +961,15 @@ function setupEventListeners() {
         timer = setTimeout(async () => {
             if (val.length < 2) return;
             resultsGrid.innerHTML = '<div class="loading">Searching TuneX...</div>';
+            
+            // Performance Boost: Stop background handshakes to prioritize Search CPU
+            if (window.hHandshake) clearInterval(window.hHandshake);
+            
             const res = await youtubeSearch(val);
             resultsGrid.innerHTML = '';
             renderCards(res, 'search-results');
-        }, 500);
+        }, 600);
     });
 }
 // --- 6. PLAYER ENGINE (CORE) ---
-// YouTube API and initialization removed - using native audio engine for background play.
+// Premium Web-native engine stabilized.
