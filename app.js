@@ -98,6 +98,7 @@ window.onYouTubeIframeAPIReady = function() {
             'onStateChange': (e) => {
                 if (e.data === YT.PlayerState.PLAYING) {
                     setPlaybackStatus("");
+                    updatePlayPauseIcons(true); // Sync Icons
                     
                     // RECURSIVE SOUND HANDSHAKE (Safe & Optimized)
                     if (window.hHandshake) clearInterval(window.hHandshake);
@@ -113,6 +114,9 @@ window.onYouTubeIframeAPIReady = function() {
                     }, 500);
 
                     if (nativeAudioEngine) nativeAudioEngine.pause(); 
+                }
+                if (e.data === YT.PlayerState.PAUSED) {
+                    updatePlayPauseIcons(false);
                 }
                 if (e.data === YT.PlayerState.BUFFERING) setPlaybackStatus("Buffering Stream...");
                 if (e.data === YT.PlayerState.ENDED) {
@@ -704,10 +708,8 @@ function togglePlay() {
     }
 }
 
-// Global Sync for the Silent Engine (Keeps app alive)
+// Global Sync for the Silent Engine (Keeps app alive - NO UI IMPACT)
 if (nativeAudioEngine) {
-    nativeAudioEngine.onplay = () => updatePlayPauseIcons(true);
-    nativeAudioEngine.onpause = () => updatePlayPauseIcons(false);
     nativeAudioEngine.onended = () => playNext();
     nativeAudioEngine.onwaiting = () => setPlaybackStatus("Buffering Stream...");
     nativeAudioEngine.onplaying = () => setPlaybackStatus("");
