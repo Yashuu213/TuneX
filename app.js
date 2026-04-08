@@ -99,15 +99,18 @@ window.onYouTubeIframeAPIReady = function() {
                 if (e.data === YT.PlayerState.PLAYING) {
                     setPlaybackStatus("");
                     
-                    // RECURSIVE SOUND HANDSHAKE:
-                    // Force un-mute every 200ms for the first 4 seconds (Absolute Fix)
+                    // RECURSIVE SOUND HANDSHAKE (Safe & Optimized)
+                    if (window.hHandshake) clearInterval(window.hHandshake);
+                    
                     let handshakeCount = 0;
-                    const silentInterval = setInterval(() => {
-                        e.target.unMute();
-                        e.target.setVolume(100);
+                    window.hHandshake = setInterval(() => {
+                        if (ytPlayer && ytPlayer.unMute) {
+                            ytPlayer.unMute();
+                            ytPlayer.setVolume(100);
+                        }
                         handshakeCount++;
-                        if (handshakeCount > 20) clearInterval(silentInterval);
-                    }, 200);
+                        if (handshakeCount > 10) clearInterval(window.hHandshake);
+                    }, 500);
 
                     if (nativeAudioEngine) nativeAudioEngine.pause(); 
                 }
