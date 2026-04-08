@@ -211,6 +211,11 @@ function switchPage(pageId) {
     if (pageId === 'trending') loadTrending();
     if (pageId === 'library') loadLibrary();
 
+    // Trigger Entrance Animation after a tiny delay for DOM painting
+    setTimeout(() => {
+        if (targetPage) targetPage.classList.add('active');
+    }, 10);
+
     // Critical Performance: Clear background handshakes on every page switch
     if (window.hHandshake) clearInterval(window.hHandshake);
 }
@@ -510,36 +515,50 @@ function renderCards(results, containerId) {
     const container = document.getElementById(containerId);
     if (!container || !results) return;
     
-    // Performance Optimization: Use DocumentFragment and STOP using global icon scanner
-    const fragment = document.createDocumentFragment();
-    
-    // SVG Templates for instant rendering (Zero Lag)
-    const playSvg = `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M5 3l14 9-14 9V3z"/></svg>`;
-    const plusSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+    // 1. CLEAR AND SHOW SKELETONS (The Premium Feel)
+    // We only show skeletons if the grid was empty or it's a new batch
+    if (container.innerHTML === "" || container.classList.contains('card-grid')) {
+       // Skeleton placeholder loop (3 items for mini-rows, 6 for grids)
+       let skeletonHTML = "";
+       for(let i=0; i<6; i++) {
+           skeletonHTML += `<div class="card skeleton" style="height: 240px; margin-bottom: 24px; pointer-events:none; border:none;"></div>`;
+       }
+       container.innerHTML = skeletonHTML;
+    }
 
-    results.slice(0, 30).forEach(track => {
-        const card = document.createElement('div');
-        card.className = 'card track-card';
-        card.innerHTML = `
-            <div class="card-img-container">
-                <img src="${track.thumbnail}" loading="lazy" onerror="this.src='/logo.png'">
-                <div class="card-play-overlay">
-                    ${playSvg}
+    // 2. Performance Optimization: Delay the actual render slightly for visual silkiness
+    setTimeout(() => {
+        container.innerHTML = "";
+        const fragment = document.createDocumentFragment();
+        
+        // SVG Templates for instant rendering (Zero Lag)
+        const playSvg = `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M5 3l14 9-14 9V3z"/></svg>`;
+        const plusSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+
+        results.slice(0, 30).forEach(track => {
+            const card = document.createElement('div');
+            card.className = 'card track-card';
+            card.innerHTML = `
+                <div class="card-img-container">
+                    <img src="${track.thumbnail}" loading="lazy" onerror="this.src='/logo.png'">
+                    <div class="card-play-overlay">
+                        ${playSvg}
+                    </div>
+                    <button class="card-plus-btn" onclick="openPlaylistModal(event, ${JSON.stringify(track).replace(/"/g, '&quot;')})">
+                        ${plusSvg}
+                    </button>
                 </div>
-                <button class="card-plus-btn" onclick="openPlaylistModal(event, ${JSON.stringify(track).replace(/"/g, '&quot;')})">
-                    ${plusSvg}
-                </button>
-            </div>
-            <div class="card-title">${track.title}</div>
-            <div class="subtitle">${track.uploader}</div>
-        `;
-        card.onclick = (e) => {
-            if (!e.target.closest('.card-plus-btn')) playTrack(track);
-        };
-        fragment.appendChild(card);
-    });
-    
-    container.appendChild(fragment);
+                <div class="card-title">${track.title}</div>
+                <div class="subtitle">${track.uploader}</div>
+            `;
+            card.onclick = (e) => {
+                if (!e.target.closest('.card-plus-btn')) playTrack(track);
+            };
+            fragment.appendChild(card);
+        });
+        
+        container.appendChild(fragment);
+    }, 400); // 400ms shimmer duration for that spotify look
 }
 
 // YouTube Engine logic moved to top for reliability
