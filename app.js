@@ -78,8 +78,8 @@ let ytPlayer = null;
 // The YouTube API calls this function once it's fully loaded
 window.onYouTubeIframeAPIReady = function() {
     ytPlayer = new YT.Player('yt-player-target', {
-        height: '20',
-        width: '20',
+        height: '1',
+        width: '1',
         playerVars: {
             'playsinline': 1,
             'controls': 0,
