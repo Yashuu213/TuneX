@@ -104,6 +104,11 @@ window.onYouTubeIframeAPIReady = function() {
                     pendingTrack = null;
                 }
             },
+            'onReady': (e) => {
+                isPlayerReady = true;
+                e.target.unMute();
+                e.target.setVolume(100);
+            },
             'onError': (e) => {
                 console.warn("TuneX Stream Error:", e.data);
                 setPlaybackStatus("Retrying next track...");
@@ -157,6 +162,7 @@ window.onload = () => {
     
     // Support Background Modes
     if (nativeAudioEngine) {
+        nativeAudioEngine.volume = 0; // Prevent Audio Ducking
         nativeAudioEngine.onended = () => nativeAudioEngine.play(); // Infinite silent loop
     }
 
@@ -551,6 +557,8 @@ async function playTrack(track) {
             ytPlayer.playVideo();
         } catch (e) {
             console.log("Handshake Fallback");
+            ytPlayer.unMute();
+            ytPlayer.setVolume(100);
             ytPlayer.loadVideoById(track.id);
             ytPlayer.playVideo();
         }
