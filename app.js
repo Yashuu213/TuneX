@@ -87,7 +87,6 @@ window.onYouTubeIframeAPIReady = function() {
             'modestbranding': 1,
             'rel': 0,
             'autoplay': 1,
-            'origin': window.location.origin,
             'enablejsapi': 1
         },
         events: {
@@ -99,11 +98,17 @@ window.onYouTubeIframeAPIReady = function() {
             'onStateChange': (e) => {
                 if (e.data === YT.PlayerState.PLAYING) {
                     setPlaybackStatus("");
-                    // Force Sound Restoration Handshake
-                    setTimeout(() => {
+                    
+                    // RECURSIVE SOUND HANDSHAKE:
+                    // Force un-mute every 200ms for the first 4 seconds (Absolute Fix)
+                    let handshakeCount = 0;
+                    const silentInterval = setInterval(() => {
                         e.target.unMute();
                         e.target.setVolume(100);
-                    }, 100);
+                        handshakeCount++;
+                        if (handshakeCount > 20) clearInterval(silentInterval);
+                    }, 200);
+
                     if (nativeAudioEngine) nativeAudioEngine.pause(); 
                 }
                 if (e.data === YT.PlayerState.BUFFERING) setPlaybackStatus("Buffering Stream...");
