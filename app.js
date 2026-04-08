@@ -104,11 +104,6 @@ window.onYouTubeIframeAPIReady = function() {
                     pendingTrack = null;
                 }
             },
-            'onReady': (e) => {
-                isPlayerReady = true;
-                e.target.unMute();
-                e.target.setVolume(100);
-            },
             'onError': (e) => {
                 console.warn("TuneX Stream Error:", e.data);
                 setPlaybackStatus("Retrying next track...");
@@ -129,8 +124,8 @@ window.onYouTubeIframeAPIReady = function() {
                             ytPlayer.setVolume(100);
                         }
                         handshakeCount++;
-                        if (handshakeCount > 10) clearInterval(window.hHandshake);
-                    }, 500);
+                        if (handshakeCount > 6) clearInterval(window.hHandshake);
+                    }, 800);
 
                     if (nativeAudioEngine) nativeAudioEngine.pause(); 
                 }
@@ -215,6 +210,9 @@ function switchPage(pageId) {
     if (pageId === 'search') loadSearch();
     if (pageId === 'trending') loadTrending();
     if (pageId === 'library') loadLibrary();
+
+    // Critical Performance: Clear background handshakes on every page switch
+    if (window.hHandshake) clearInterval(window.hHandshake);
 }
 
 function goBack() {
@@ -512,20 +510,24 @@ function renderCards(results, containerId) {
     const container = document.getElementById(containerId);
     if (!container || !results) return;
     
-    // Performance Optimization: Use DocumentFragment to prevent 60 separate reflows
+    // Performance Optimization: Use DocumentFragment and STOP using global icon scanner
     const fragment = document.createDocumentFragment();
     
-    results.slice(0, 60).forEach(track => {
+    // SVG Templates for instant rendering (Zero Lag)
+    const playSvg = `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M5 3l14 9-14 9V3z"/></svg>`;
+    const plusSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+
+    results.slice(0, 30).forEach(track => {
         const card = document.createElement('div');
         card.className = 'card track-card';
         card.innerHTML = `
             <div class="card-img-container">
                 <img src="${track.thumbnail}" loading="lazy" onerror="this.src='/logo.png'">
                 <div class="card-play-overlay">
-                    <i data-lucide="play"></i>
+                    ${playSvg}
                 </div>
                 <button class="card-plus-btn" onclick="openPlaylistModal(event, ${JSON.stringify(track).replace(/"/g, '&quot;')})">
-                    <i data-lucide="plus"></i>
+                    ${plusSvg}
                 </button>
             </div>
             <div class="card-title">${track.title}</div>
@@ -538,7 +540,6 @@ function renderCards(results, containerId) {
     });
     
     container.appendChild(fragment);
-    lucide.createIcons();
 }
 
 // YouTube Engine logic moved to top for reliability
