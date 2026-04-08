@@ -78,8 +78,8 @@ let ytPlayer = null;
 // The YouTube API calls this function once it's fully loaded
 window.onYouTubeIframeAPIReady = function() {
     ytPlayer = new YT.Player('yt-player-target', {
-        height: '1',
-        width: '1',
+        height: '10',
+        width: '10',
         playerVars: {
             'playsinline': 1,
             'controls': 0,
@@ -99,10 +99,12 @@ window.onYouTubeIframeAPIReady = function() {
             'onStateChange': (e) => {
                 if (e.data === YT.PlayerState.PLAYING) {
                     setPlaybackStatus("");
-                    // Final Voice Restoration Handshake
-                    e.target.unMute();
-                    e.target.setVolume(100);
-                    if (nativeAudioEngine) nativeAudioEngine.pause(); // Release Focus
+                    // Force Sound Restoration Handshake
+                    setTimeout(() => {
+                        e.target.unMute();
+                        e.target.setVolume(100);
+                    }, 100);
+                    if (nativeAudioEngine) nativeAudioEngine.pause(); 
                 }
                 if (e.data === YT.PlayerState.BUFFERING) setPlaybackStatus("Buffering Stream...");
                 if (e.data === YT.PlayerState.ENDED) {
