@@ -74,6 +74,9 @@
                 <div class="search-container">
                     <input type="text" id="search-bar" placeholder="Search for songs, artists, or genres..." autocomplete="off">
                 </div>
+                <div id="recent-search-chips" class="recent-searches">
+                    <!-- Recent Search chips will be injected here -->
+                </div>
                 <div id="search-results" class="card-grid">
                     <!-- Results injected here -->
                 </div>
@@ -186,11 +189,11 @@
 
                 <!-- Master Controls -->
                 <div class="fp-controls">
-                    <button class="fp-ctrl-minor" onclick="player.prev()"><i data-lucide="shuffle"></i></button>
+                    <button class="fp-ctrl-minor" id="shuffle-btn" onclick="toggleShuffle()"><i data-lucide="shuffle"></i></button>
                     <button class="fp-ctrl-major" onclick="player.prev()"><i data-lucide="skip-back"></i></button>
                     <button class="fp-ctrl-play" id="full-play-pause" onclick="togglePlay()"><i data-lucide="play" fill="black"></i></button>
                     <button class="fp-ctrl-major" onclick="player.next()"><i data-lucide="skip-forward"></i></button>
-                    <button class="fp-ctrl-minor"><i data-lucide="repeat"></i></button>
+                    <button class="fp-ctrl-minor" id="repeat-btn" onclick="toggleRepeat()"><i data-lucide="repeat"></i></button>
                 </div>
 
                 <!-- Up Next -->

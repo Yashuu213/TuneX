@@ -8,7 +8,7 @@ let recentHistory = [];
 const navHistory = ['home'];
 let isGoingBack = false;
 const LocalDB = {
-    get: (key) => JSON.parse(localStorage.getItem(`tunex_${key}`) || (key === 'playlists' ? '{}' : '[]')),
+    get: (key) => JSON.parse(localStorage.getItem(`tunex_${key}`) || (key === 'playlists' ? '{}' : (key === 'volume' ? '100' : '[]'))),
     save: (key, data) => localStorage.setItem(`tunex_${key}`, JSON.stringify(data)),
     
     addToHistory: (track) => {
@@ -35,7 +35,28 @@ const LocalDB = {
 
 const player = {
     next: () => {
+        if (!currentTrack) return;
+
+        // 1. REPEAT ONE LOGIC
+        if (repeatMode === 1) {
+            playTrack(currentTrack);
+            return;
+        }
+
+        // 2. SHUFFLE LOGIC
+        if (isShuffle && nextQueue.length > 0) {
+            const index = Math.floor(Math.random() * nextQueue.length);
+            const track = nextQueue.splice(index, 1)[0];
+            playTrack(track);
+            return;
+        }
+
+        // 3. REPEAT ALL / NORMAL LOGIC
         if (nextQueue.length > 0) {
+            playTrack(nextQueue.shift());
+        } else if (repeatMode === 2 && recentHistory.length > 0) {
+            // Repeat All: Use history as the new queue if empty
+            nextQueue = [...recentHistory];
             playTrack(nextQueue.shift());
         } else {
             setNativeBackgroundAudio(false); 
@@ -43,7 +64,7 @@ const player = {
     },
     prev: () => {
         if (recentHistory.length > 1) {
-            recentHistory.pop(); 
+            recentHistory.pop(); // Remove current
             const prev = recentHistory.pop();
             if (prev) playTrack(prev);
         }
@@ -77,6 +98,38 @@ let ytPlayer = null;
 let isPlayerReady = false;
 let pendingTrack = null;
 
+// PLAYBACK STATE (The Spotify Standard)
+let isShuffle = LocalDB.get('shuffle') || false;
+let repeatMode = LocalDB.get('repeat') || 0; // 0=Off, 1=One, 2=All
+let currentVolume = LocalDB.get('volume') || 100;
+
+function toggleShuffle() {
+    isShuffle = !isShuffle;
+    LocalDB.save('shuffle', isShuffle);
+    updateControlStates();
+}
+
+function toggleRepeat() {
+    repeatMode = (repeatMode + 1) % 3;
+    LocalDB.save('repeat', repeatMode);
+    updateControlStates();
+}
+
+function updateControlStates() {
+    const sBtn = document.getElementById('shuffle-btn');
+    const rBtn = document.getElementById('repeat-btn');
+    
+    if (sBtn) sBtn.classList.toggle('active', isShuffle);
+    if (rBtn) {
+        rBtn.classList.toggle('active', repeatMode > 0);
+        const icon = rBtn.querySelector('i');
+        if (icon) {
+            // Using logic to swap icons if repeat-one is needed (optional polish)
+            lucide.createIcons();
+        }
+    }
+}
+
 // The YouTube API calls this function once it's fully loaded
 window.onYouTubeIframeAPIReady = function() {
     ytPlayer = new YT.Player('yt-player-target', {
@@ -96,13 +149,23 @@ window.onYouTubeIframeAPIReady = function() {
                 console.log("TuneX Engine Ready 🚀");
                 isPlayerReady = true;
                 e.target.unMute();
-                e.target.setVolume(100);
+                e.target.setVolume(currentVolume);
                 
-                // Play queued track if any
+                // RESTORE STATE: Resume last track if available
+                const last = LocalDB.get('last_track');
+                if (last && !pendingTrack) {
+                    updateUI(last);
+                    setPlaybackStatus("Resume your vibe...");
+                    // We don't auto-play to respect browser policies, just load
+                    currentTrack = last;
+                    ytPlayer.cueVideoById(last.id);
+                }
+
                 if (pendingTrack) {
                     playTrack(pendingTrack);
                     pendingTrack = null;
                 }
+                updateControlStates(); // Restore Shuffle/Repeat icons
             },
             'onError': (e) => {
                 console.warn("TuneX Stream Error:", e.data);
@@ -178,6 +241,7 @@ window.onload = () => {
     loadDashboard();
     setupEventListeners();
     updateGreeting();
+    renderRecentSearches();
 
     // Unlock Audio Context on first click (Vital for Mobile Apps/WebViews)
     document.addEventListener('click', () => {
@@ -231,6 +295,9 @@ function switchPage(pageId) {
 
     // Critical Performance: Clear background handshakes on every page switch
     if (window.hHandshake) clearInterval(window.hHandshake);
+    
+    // Memory Management: Cap History
+    if (navHistory.length > 20) navHistory.shift();
 }
 
 function goBack() {
@@ -261,6 +328,9 @@ function updateGreeting() {
 
 // --- 2. Backend Bridge ---
 async function youtubeSearch(query, isTrending = false, isHome = false) {
+    // Memory Management: Cap Cache
+    if (SEARCH_CACHE.size > 50) SEARCH_CACHE.clear();
+
     const cacheKey = `${query}_${isTrending}_${isHome}`;
     if (SEARCH_CACHE.has(cacheKey)) return SEARCH_CACHE.get(cacheKey);
 
@@ -274,12 +344,52 @@ async function youtubeSearch(query, isTrending = false, isHome = false) {
 
         if (results && results.length > 0) {
             SEARCH_CACHE.set(cacheKey, results);
+            
+            // Save to Recent Searches if it's a manual query
+            if (!isTrending && !isHome && query.length > 2) {
+                saveRecentSearch(query);
+            }
             return results;
         }
         return [];
     } catch (e) {
         console.error("Backend Error", e);
         return [];
+    }
+}
+
+function saveRecentSearch(query) {
+    let searches = LocalDB.get('recent_searches');
+    searches = searches.filter(s => s.toLowerCase() !== query.toLowerCase());
+    searches.unshift(query);
+    LocalDB.save('recent_searches', searches.slice(0, 5));
+    renderRecentSearches();
+}
+
+function renderRecentSearches() {
+    const container = document.getElementById('recent-search-chips');
+    if (!container) return;
+    
+    const searches = LocalDB.get('recent_searches');
+    if (searches.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'flex';
+    container.innerHTML = searches.map(s => `
+        <div class="search-chip" onclick="executeQuickSearch('${s.replace(/'/g, "\\'")}')">
+            <i data-lucide="history"></i> ${s}
+        </div>
+    `).join('');
+    lucide.createIcons();
+}
+
+function executeQuickSearch(query) {
+    const sb = document.getElementById('search-bar');
+    if (sb) {
+        sb.value = query;
+        sb.dispatchEvent(new Event('input'));
     }
 }
 
@@ -611,6 +721,7 @@ async function playTrack(track) {
     startEngineSyncLoop();
 
     LocalDB.addToHistory(track);
+    LocalDB.save('last_track', track);
     recentHistory.push(track);
     fetchUpNext(track);
 }

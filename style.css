@@ -454,6 +454,36 @@ body {
     box-shadow: 0 8px 20px rgba(255, 215, 0, 0.4);
 }
 
+/* Recent Search Chips (The Spotify Factor) */
+.recent-searches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.search-chip {
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 30px;
+    font-size: 13px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.search-chip:hover {
+    background: var(--glass-hover);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+.search-chip i { font-size: 14px; opacity: 0.5; }
+
 .card-title {
     font-weight: 800;
     font-size: 0.95rem;
@@ -608,6 +638,21 @@ body {
 }
 
 .control-btn:hover { color: #fff; transform: scale(1.15); }
+
+.control-btn.active {
+    color: var(--primary);
+    filter: drop-shadow(0 0 10px var(--primary-glow));
+}
+
+.control-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    width: 4px;
+    height: 4px;
+    background: var(--primary);
+    border-radius: 50%;
+}
 
 .control-btn.main { 
     background: #fff; 
