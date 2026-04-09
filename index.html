@@ -12,6 +12,11 @@
     
     <!-- CSP for YouTube & WebView Compatibility -->
     <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; frame-src *; img-src * data:; media-src * data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *;">
+    <!-- Turbo Network Hints (The 0.1s Head Start) -->
+    <link rel="preconnect" href="https://tunex-app.vercel.app">
+    <link rel="dns-prefetch" href="https://tunex-app.vercel.app">
+    <link rel="preconnect" href="https://www.youtube.com">
+    <link rel="preconnect" href="https://i.ytimg.com">
 </head>
 <body>
     <div id="app">

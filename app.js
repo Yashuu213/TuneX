@@ -30,6 +30,17 @@ const LocalDB = {
             p[name].push(track); LocalDB.save('playlists', p); return true;
         }
         return false;
+    },
+    
+    // 🏆 TURBO CACHE (SWR)
+    cacheDashboard: (rowId, data) => {
+        let cache = LocalDB.get('dash_cache') || {};
+        cache[rowId] = data;
+        LocalDB.save('dash_cache', cache);
+    },
+    getCachedDashboard: (rowId) => {
+        const cache = LocalDB.get('dash_cache') || {};
+        return cache[rowId] || null;
     }
 };
 
@@ -475,10 +486,10 @@ async function loadDashboard() {
     const rowsContainer = document.getElementById('home-rows');
     rowsContainer.innerHTML = '';
 
-    const rowMappings = categories.map((cat, index) => {
-        const row = document.createElement('div');
+    categories.forEach((cat, index) => {
         const rowId = `row-${cat.title.replace(/[^\w]/g, '')}`;
-        row.innerHTML = `<h2 class="section-header">${cat.title}</h2><div class="card-grid" id="${rowId}"><div class="loading">Connecting...</div></div>`;
+        const row = document.createElement('div');
+        row.innerHTML = `<h2 class="section-header">${cat.title}</h2><div class="card-grid" id="${rowId}"></div>`;
         rowsContainer.appendChild(row);
 
         if (index === 2) {
@@ -487,56 +498,35 @@ async function loadDashboard() {
             rowsContainer.appendChild(singerRow);
         }
 
-        return { ...cat, rowId };
-    });
-
-    // 2. TURBO PARALLEL FETCHING (Increasing from 3 to 6 at once)
-    const seed = Math.floor(Math.random() * 999999);
-    const priorities = rowMappings.slice(0, 6);
-    const defaults = rowMappings.slice(6);
-
-    // Speed up top rows first
-    await Promise.all(priorities.map(async (cat) => {
-        let r;
-        if (cat.isRecommendation) {
-            const res = await fetch(`${BASE_URL}/api/recommendations?home=true&v=${seed}`);
-            r = await res.json();
+        // 🏎️ SWR: Load from CACHE first (Instant 0.1s load)
+        const cached = LocalDB.getCachedDashboard(rowId);
+        if (cached) {
+            renderCards(cached, rowId);
         } else {
-            // Passing seed to ensure un-cached backend sampling
-            const url = cat.isTrending ? 
-                `${BASE_URL}/api/search?trending=true&home=true&seed=${seed}` : 
-                `${BASE_URL}/api/search?q=${encodeURIComponent(cat.query)}&home=true&seed=${seed}`;
-            const res = await fetch(url);
-            r = await res.json();
+            const grid = document.getElementById(rowId);
+            if (grid) grid.innerHTML = '<div class="loading">Warming up...</div>';
         }
 
-        const grid = document.getElementById(cat.rowId);
-        if (grid) {
-            grid.innerHTML = '';
-            if (r && r.length > 0) renderCards(r, cat.rowId);
-            else grid.innerHTML = '<div class="empty-state">No hits found. Try refreshing!</div>';
-        }
-    }));
-
-    // Lazy load the rest in the background
-    setTimeout(() => {
-        defaults.forEach(async (cat) => {
-            let r;
-            if (cat.isRecommendation) {
-                const res = await fetch(`/api/recommendations?home=true&v=${seed}`);
-                r = await res.json();
-            } else {
-                const url = cat.isTrending ? 
-                    `/api/search?trending=true&home=true&seed=${seed}` : 
-                    `/api/search?q=${encodeURIComponent(cat.query)}&home=true&seed=${seed}`;
+        // 🚀 NON-BLOCKING BACKGROUND FETCH
+        (async () => {
+            try {
+                const url = `${BASE_URL}/api/search?q=${encodeURIComponent(cat.query)}&home=true`;
                 const res = await fetch(url);
-                r = await res.json();
+                const results = await res.json();
+                
+                if (results && results.length > 0) {
+                    const grid = document.getElementById(rowId);
+                    if (grid) {
+                        grid.innerHTML = '';
+                        renderCards(results, rowId);
+                        LocalDB.cacheDashboard(rowId, results);
+                    }
+                }
+            } catch (e) {
+                console.warn(`Dash fetch failed for ${cat.title}:`, e);
             }
-            const grid = document.getElementById(cat.rowId);
-            if (grid) grid.innerHTML = '';
-            renderCards(r, cat.rowId);
-        });
-    }, 1500);
+        })();
+    });
 
     renderArtists();
     renderFilterBar();
