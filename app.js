@@ -243,13 +243,22 @@ window.onload = () => {
     updateGreeting();
     renderRecentSearches();
 
-    // Unlock Audio Context on first click (Vital for Mobile Apps/WebViews)
-    document.addEventListener('click', () => {
+    const sb = document.getElementById('search-bar');
+    if (sb) {
+        sb.addEventListener('focus', () => renderRecentSearches());
+    }
+
+    // 🏆 APK SHIELD: Universal Audio Primer
+    const audioPrimer = () => {
         if (nativeAudioEngine && nativeAudioEngine.paused) {
             nativeAudioEngine.play().catch(() => {});
-            console.log("Audio Context Unlocked 🔓");
+            console.log("APK Shield: Audio Context Primed 🔓");
         }
-    }, { once: true });
+        document.removeEventListener('click', audioPrimer);
+        document.removeEventListener('touchstart', audioPrimer);
+    };
+    document.addEventListener('click', audioPrimer);
+    document.addEventListener('touchstart', audioPrimer);
 };
 
 function setPlaybackStatus(status) {
@@ -919,14 +928,20 @@ async function updateMediaSession(track) {
             ]
         });
 
-        // ACTION HANDLERS (One-time registration)
+        // ACTION HANDLERS (One-time registration for APK Persistence)
         if (!window.mediaHandlersSet) {
-            navigator.mediaSession.setActionHandler('play', () => togglePlay());
-            navigator.mediaSession.setActionHandler('pause', () => togglePlay());
-            navigator.mediaSession.setActionHandler('previoustrack', () => playPrev());
-            navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
-            navigator.mediaSession.setActionHandler('seekto', (details) => {
-                if (ytPlayer && ytPlayer.seekTo) ytPlayer.seekTo(details.seekTime);
+            const handlers = {
+                'play': () => togglePlay(),
+                'pause': () => togglePlay(),
+                'previoustrack': () => playPrev(),
+                'nexttrack': () => playNext(),
+                'seekto': (details) => { if (ytPlayer && ytPlayer.seekTo) ytPlayer.seekTo(details.seekTime); }
+            };
+
+            Object.entries(handlers).forEach(([action, handler]) => {
+                try {
+                    navigator.mediaSession.setActionHandler(action, handler);
+                } catch (e) { console.warn(`MediaSession ${action} not supported`); }
             });
             window.mediaHandlersSet = true;
         }
@@ -950,6 +965,13 @@ function togglePlay() {
             ytPlayer.setVolume(100);
         }
         ytPlayer.playVideo();
+        
+        // 🏆 APK PERSISTENCE BOOSTER
+        // Ensure the silent engine is playing to prevent Android background kill
+        if (nativeAudioEngine && nativeAudioEngine.paused) {
+            nativeAudioEngine.play().catch(() => {});
+        }
+        
         updatePlayPauseIcons(true); // INSTANT FEEDBACK
     }
 }

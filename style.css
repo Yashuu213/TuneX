@@ -34,6 +34,7 @@
     box-sizing: border-box;
     font-family: 'Outfit', sans-serif;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation; /* Fix Mobile Tap Delay */
 }
 
 body {
@@ -43,6 +44,7 @@ body {
     overflow: hidden;
     letter-spacing: -0.02em;
     -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none; /* Prevent iOS/Android Pull-to-Refresh bounce */
 }
 
 /* --- Premium Layout Engine --- */
