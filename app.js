@@ -122,12 +122,18 @@ window.onYouTubeIframeAPIReady = function() {
                         if (ytPlayer && ytPlayer.unMute) {
                             ytPlayer.unMute();
                             ytPlayer.setVolume(100);
+                            
+                            // Watchdog: If state is supposed to be playing but isn't, kickstart it
+                            if (ytPlayer.getPlayerState() !== 1) ytPlayer.playVideo();
                         }
                         handshakeCount++;
-                        if (handshakeCount > 6) clearInterval(window.hHandshake);
-                    }, 800);
+                        if (handshakeCount > 15) clearInterval(window.hHandshake);
+                    }, 500);
 
                     if (nativeAudioEngine) nativeAudioEngine.pause(); 
+                    
+                    // Start absolute sync loop
+                    startEngineSyncLoop();
                 }
                 if (e.data === YT.PlayerState.PAUSED) {
                     updatePlayPauseIcons(false);
@@ -594,41 +600,77 @@ async function playTrack(track) {
         initYouTubeAPI(); // Ensure it starts loading
     }
 
-    // 3. Manual Progress Timer (Since we skip the complex API)
-    startProgressTimer(track.duration || 180); // Fallback to 3m
+    // 3. Absolute Engine Sync (Bye manual guess-work)
+    startEngineSyncLoop();
 
     LocalDB.addToHistory(track);
     recentHistory.push(track);
     fetchUpNext(track);
 }
 
-let songTimer = null;
-let currentSeconds = 0;
+let syncInterval = null;
+let lastKnownTime = 0;
+let stallCount = 0;
 
-function startProgressTimer(duration) {
-    if (songTimer) clearInterval(songTimer);
-    currentSeconds = 0;
+function startEngineSyncLoop() {
+    if (syncInterval) clearInterval(syncInterval);
+    lastKnownTime = 0;
+    stallCount = 0;
     
-    songTimer = setInterval(() => {
-        currentSeconds++;
-        const pct = (currentSeconds / duration) * 100;
+    syncInterval = setInterval(() => {
+        if (!ytPlayer || !ytPlayer.getCurrentTime || !currentTrack) return;
         
+        const state = ytPlayer.getPlayerState();
+        const currentTime = ytPlayer.getCurrentTime();
+        const duration = ytPlayer.getDuration() || currentTrack.duration || 1;
+        
+        // 1. Sync Progress Bars (Real Time)
+        const pct = (currentTime / duration) * 100;
         const sliders = ['mini-progress', 'full-progress'];
         sliders.forEach(id => {
             const s = document.getElementById(id);
             if (s) s.value = pct || 0;
         });
 
+        // 2. Sync Time Labels
         const ct = document.getElementById('current-time');
         const tt = document.getElementById('total-time');
-        if (ct) ct.textContent = formatTime(currentSeconds);
+        if (ct) ct.textContent = formatTime(currentTime);
         if (tt) tt.textContent = formatTime(duration);
-
-        if (currentSeconds >= duration) {
-            clearInterval(songTimer);
-            playNext();
+        
+        // 3. SOUND WATCHDOG: Force audio if bar is moving but state is weird
+        if (state === 1) { // Engine says PLAYING
+            if (currentTime === lastKnownTime && currentTime > 0) {
+                stallCount++;
+                if (stallCount > 4) { // Stalled for 2 seconds
+                    console.log("Persistence Watchdog: Forcing Sound...");
+                    ytPlayer.unMute();
+                    ytPlayer.setVolume(100);
+                    ytPlayer.playVideo();
+                    stallCount = 0;
+                }
+            } else {
+                stallCount = 0;
+            }
+            lastKnownTime = currentTime;
+        } else if (state === 3) {
+            setPlaybackStatus("Buffering Stream...");
+        } else if (state === -1 || state === 2) {
+            // Unstarted or Paused but supposed to be active
+            if (stallCount > 6) {
+                ytPlayer.playVideo();
+                stallCount = 0;
+            }
+            stallCount++;
         }
-    }, 1000);
+    }, 500);
+}
+
+function formatTime(s) {
+    if (!s || isNaN(s)) return "0:00";
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec < 10 ? '0' : ''}${sec}`;
 }
 
 async function fetchUpNext(track) {
