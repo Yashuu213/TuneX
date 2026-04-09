@@ -119,12 +119,19 @@ window.onYouTubeIframeAPIReady = function() {
                     
                     let handshakeCount = 0;
                     window.hHandshake = setInterval(() => {
+                        // EXIT IF MANUALLY PAUSED: Don't fight the user!
+                        if (!ytPlayer || ytPlayer.getPlayerState() === 2) {
+                            clearInterval(window.hHandshake);
+                            return;
+                        }
+
                         if (ytPlayer && ytPlayer.unMute) {
                             ytPlayer.unMute();
                             ytPlayer.setVolume(100);
                             
-                            // Watchdog: If state is supposed to be playing but isn't, kickstart it
-                            if (ytPlayer.getPlayerState() !== 1) ytPlayer.playVideo();
+                            // Watchdog: Kickstart only if stalled/buffering
+                            const s = ytPlayer.getPlayerState();
+                            if (s !== 1 && s !== 2) ytPlayer.playVideo();
                         }
                         handshakeCount++;
                         if (handshakeCount > 15) clearInterval(window.hHandshake);
@@ -655,13 +662,15 @@ function startEngineSyncLoop() {
             lastKnownTime = currentTime;
         } else if (state === 3) {
             setPlaybackStatus("Buffering Stream...");
-        } else if (state === -1 || state === 2) {
-            // Unstarted or Paused but supposed to be active
+        } else if (state === -1) { // Unstarted
             if (stallCount > 6) {
                 ytPlayer.playVideo();
                 stallCount = 0;
             }
             stallCount++;
+        } else {
+            // Respect State 2 (PAUSED) - Do not increment stallCount
+            stallCount = 0;
         }
     }, 500);
 }
@@ -782,18 +791,20 @@ function togglePlay() {
     if (!ytPlayer || !ytPlayer.getPlayerState) return;
     const state = ytPlayer.getPlayerState();
     
+    // Safety: Clear all background handshakes immediately so they don't fight the user
+    if (window.hHandshake) clearInterval(window.hHandshake);
+
     if (state === YT.PlayerState.PLAYING) {
         ytPlayer.pauseVideo();
         if (nativeAudioEngine) nativeAudioEngine.pause();
-        updatePlayPauseIcons(false);
+        updatePlayPauseIcons(false); // INSTANT FEEDBACK
     } else {
         if (ytPlayer.unMute) {
             ytPlayer.unMute();
             ytPlayer.setVolume(100);
         }
         ytPlayer.playVideo();
-        // Removed nativeAudioEngine.play() here to prevent focus theft
-        updatePlayPauseIcons(true);
+        updatePlayPauseIcons(true); // INSTANT FEEDBACK
     }
 }
 
