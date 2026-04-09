@@ -416,6 +416,36 @@ const CURATED_ARTISTS = {
 };
 const TOP_SINGERS = Object.keys(CURATED_ARTISTS);
 
+const MOODS = [
+    { name: "Gym Energy 🏋️", query: "best workout motivation songs mix 2026" },
+    { name: "Calm Waves 🌊", query: "lofi hip hop radio beats to relax study" },
+    { name: "Night Drive 🏎️", query: "night drive slow reverb songs hindi" },
+    { name: "Party Pulse 🥂", query: "latest bollywood party dance tracks" },
+    { name: "Deep Focus 🧠", query: "ambient study music focus alpha waves" }
+];
+
+function renderMoodVibes() {
+    const container = document.getElementById('mood-vibe-bar');
+    if (!container) return;
+    
+    container.innerHTML = MOODS.map(m => `
+        <div class="mood-card" onclick="startMoodRadio('${m.query.replace(/'/g, "\\'")}')">
+            <span>${m.name}</span>
+        </div>
+    `).join('');
+}
+
+async function startMoodRadio(query) {
+    setPlaybackStatus(`Tuning into ${query.split(' ')[0]}...`);
+    const results = await youtubeSearch(query);
+    if (results && results.length > 0) {
+        playTrack(results[0]);
+        // Set the rest as the upcoming queue
+        nextQueue = results.slice(1);
+        renderUpNext(nextQueue);
+    }
+}
+
 async function loadDashboard() {
     if (activeGenre) {
         renderGenreDiscovery(activeGenre);
@@ -501,6 +531,7 @@ async function loadDashboard() {
 
     renderArtists();
     renderFilterBar();
+    renderMoodVibes();
 }
 
 function renderFilterBar() {
@@ -719,6 +750,7 @@ async function playTrack(track) {
 
     // 3. Absolute Engine Sync (Bye manual guess-work)
     startEngineSyncLoop();
+    isPreBuffered = false; // Reset for new track
 
     LocalDB.addToHistory(track);
     LocalDB.save('last_track', track);
@@ -771,18 +803,21 @@ function startEngineSyncLoop() {
                 stallCount = 0;
             }
             lastKnownTime = currentTime;
-        } else if (state === 3) {
-            setPlaybackStatus("Buffering Stream...");
-        } else if (state === -1) { // Unstarted
-            if (stallCount > 6) {
-                ytPlayer.playVideo();
-                stallCount = 0;
+        } 
+        
+        // 4. ZERO-GAP PRE-BUFFERING (Beat Spotify)
+        if (currentTime > (duration - 10) && !isPreBuffered && nextQueue.length > 0) {
+            console.log("Zero-Gap: Pre-buffering next track...");
+            const nextTrack = nextQueue[0];
+            // Using cueVideoById to pre-load metadata and start buffering without playing
+            if (ytPlayer && ytPlayer.cueVideoById) {
+               ytPlayer.cueVideoById(nextTrack.id);
+               isPreBuffered = true;
             }
-            stallCount++;
-        } else {
-            // Respect State 2 (PAUSED) - Do not increment stallCount
-            stallCount = 0;
         }
+        
+        // 5. AUTO-RESTORE if paused but supposed to be active
+        if (state === 2 && stallCount > 6) { stallCount = 0; }
     }, 500);
 }
 
@@ -1144,7 +1179,7 @@ function setupEventListeners() {
 
         timer = setTimeout(async () => {
             if (val.length < 2) return;
-            resultsGrid.innerHTML = '<div class="loading">Searching TuneX...</div>';
+            resultsGrid.innerHTML = '<div class="loading">Searching TuneX (Turbo)...</div>';
             
             // Performance Boost: Stop background handshakes to prioritize Search CPU
             if (window.hHandshake) clearInterval(window.hHandshake);
@@ -1152,7 +1187,7 @@ function setupEventListeners() {
             const res = await youtubeSearch(val);
             resultsGrid.innerHTML = '';
             renderCards(res, 'search-results');
-        }, 600);
+        }, 300); // 300ms for Zero-Lag Typed Search
     });
 }
 // --- 6. PLAYER ENGINE (CORE) ---

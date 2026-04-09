@@ -417,6 +417,49 @@ body {
 }
 
 
+/* Mood Bar & Cards (The Spotify Killer) */
+.mood-bar {
+    display: flex;
+    overflow-x: auto;
+    gap: 15px;
+    padding: 15px 5px 25px 5px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.mood-bar::-webkit-scrollbar { display: none; }
+
+.mood-card {
+    min-width: 140px;
+    height: 80px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    white-space: normal;
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.mood-card:hover {
+    transform: translateY(-8px) scale(1.05);
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 255, 255, 0.08) 100%);
+    border-color: rgba(255, 215, 0, 0.5);
+    box-shadow: 0 10px 25px rgba(255, 215, 0, 0.3);
+}
+
+.mood-card span {
+    line-height: 1.2;
+}
+
 /* Quick Filters Pulse Bar */
 .filter-bar {
     display: flex;
