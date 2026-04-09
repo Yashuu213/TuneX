@@ -775,11 +775,12 @@ function startEngineSyncLoop() {
         
         // 1. Sync Progress Bars (Real Time)
         const pct = (currentTime / duration) * 100;
-        const sliders = ['mini-progress', 'full-progress'];
-        sliders.forEach(id => {
-            const s = document.getElementById(id);
-            if (s) s.value = pct || 0;
-        });
+        
+        const fullSlider = document.getElementById('full-progress');
+        if (fullSlider) fullSlider.value = pct || 0;
+        
+        const miniFill = document.getElementById('mini-progress-fill');
+        if (miniFill) miniFill.style.width = `${pct || 0}%`;
 
         // 2. Sync Time Labels
         const ct = document.getElementById('current-time');
@@ -804,16 +805,8 @@ function startEngineSyncLoop() {
             lastKnownTime = currentTime;
         } 
         
-        // 4. ZERO-GAP PRE-BUFFERING (Beat Spotify)
-        if (currentTime > (duration - 10) && !isPreBuffered && nextQueue.length > 0) {
-            console.log("Zero-Gap: Pre-buffering next track...");
-            const nextTrack = nextQueue[0];
-            // Using cueVideoById to pre-load metadata and start buffering without playing
-            if (ytPlayer && ytPlayer.cueVideoById) {
-               ytPlayer.cueVideoById(nextTrack.id);
-               isPreBuffered = true;
-            }
-        }
+        // 4. PRE-BUFFERING logic removed to ensure 100% stability. 
+        // YouTube API does not support silent cueing during playback in same frame.
         
         // 5. AUTO-RESTORE if paused but supposed to be active
         if (state === 2 && stallCount > 6) { stallCount = 0; }
